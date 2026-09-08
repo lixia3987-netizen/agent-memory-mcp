@@ -1,0 +1,54 @@
+{
+  "namespace": "work",
+  "project": "memory-mcp",
+  "logLevel": "info",
+  "embedding": {
+    "enabled": false,
+    "baseUrl": "https://provider.example/v1",
+    "model": "YOUR_EMBEDDING_MODEL",
+    "apiKeyEnv": "AGENT_MEMORY_EMBEDDING_API_KEY",
+    "timeoutMs": 15000,
+    "retries": 1,
+    "batchSize": 16,
+    "maxCandidates": 5000,
+    "maxVectorBytes": 33554432
+  },
+  "llm": {
+    "enabled": false,
+    "baseUrl": "https://provider.example/v1",
+    "model": "YOUR_CHAT_MODEL",
+    "apiKeyEnv": "AGENT_MEMORY_LLM_API_KEY",
+    "timeoutMs": 15000,
+    "retries": 1
+  },
+  "graph": {
+    "maxDepth": 3,
+    "maxNodes": 200,
+    "maxEdges": 2000
+  },
+  "policy": {
+    "secretDetection": true,
+    "secretAction": "reject",
+    "rejectTypes": [],
+    "rejectSources": [],
+    "rejectNamespaces": [],
+    "minimumImportance": 1,
+    "maxContentBytes": 65536,
+    "defaultTtlDays": null,
+    "duplicateThreshold": 0.85,
+    "typeDefaults": {}
+  },
+  "http": {
+    "enabled": false,
+    "host": "127.0.0.1",
+    "port": 3210,
+    "tokenEnv": "AGENT_MEMORY_HTTP_TOKEN",
+    "maxRequestBytes": 12582912,
+    "maxConcurrentRequests": 20,
+    "requestTimeoutMs": 30000,
+    "headersTimeoutMs": 10000
+  },
+  "duplicates": {
+    "maxCandidateBytes": 8388608
+  }
+}

@@ -1,0 +1,37 @@
+name: Node 24 validation
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+      - run: node dist/index.js doctor --home ./test-results/doctor
+      - run: node dist/index.js init --home ./test-results/init
+      - run: pnpm test:smoke
+  release-gate:
+    if: always()
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Linux and Windows success
+        env:
+          RESULT: ${{ needs.validate.result }}
+        run: test "$RESULT" = "success"

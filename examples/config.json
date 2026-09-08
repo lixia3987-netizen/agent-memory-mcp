@@ -1,0 +1,19 @@
+{
+  "namespace": "work",
+  "project": "memory-mcp",
+  "logLevel": "info",
+  "busyTimeoutMs": 5000,
+  "search": {
+    "defaultLimit": 10,
+    "maxLimit": 100,
+    "importanceBoost": 0.12,
+    "recencyBoost": 0.08
+  },
+  "imports": {
+    "allowedRoots": [],
+    "maxFileBytes": 10485760,
+    "maxFiles": 1000,
+    "maxRecords": 10000
+  },
+  "maxExportBytes": 16777216
+}

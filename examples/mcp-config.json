@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "node",
+      "args": ["C:\\tools\\agent-memory-mcp\\dist\\index.js", "serve"],
+      "env": {
+        "AGENT_MEMORY_HOME": "C:\\AgentMemoryData",
+        "AGENT_MEMORY_NAMESPACE": "work",
+        "AGENT_MEMORY_PROJECT": "memory-mcp"
+      }
+    }
+  }
+}

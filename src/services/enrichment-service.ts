@@ -22,8 +22,11 @@ export class EnrichmentService {
     if (!this.provider) return { enabled:false,status:'disabled',memory_id:memory.id };
     if (stored && stored.provider===this.provider.id && stored.model===this.provider.model) return { enabled:true,status:'completed',enrichment:stored,cached:true };
     const job=this.repository.enqueue(memory,true);
-    const claimed=this.repository.claimJob(scope,this.leaseMs(),job.id);
-    if (!claimed) return { enabled:true,status:'running',job_id:job.id };
+    const claimed=this.repository.claimJob(scope,this.leaseMs(),job.id,this.memory.config.llm.maxAttempts);
+    if (!claimed) {
+      const exhausted=job.attempts>=this.memory.config.llm.maxAttempts && !(job.status==='running' && (job.lease_until ?? 0)>Date.now());
+      return { enabled:true,status:exhausted ? 'failed' : 'running',job_id:job.id };
+    }
     return this.execute(claimed,scope);
   }
   private leaseMs(): number { const cfg=this.memory.config.llm;return cfg.timeoutMs*(cfg.retries+1)+10000; }
@@ -47,7 +50,8 @@ export class EnrichmentService {
       });
     } catch (error) {
       const e=asAppError(error);
-      this.repository.finishJob(job.id,job.lease_token!,e.code==='CONFLICT' ? 'stale' : e.retryable ? 'pending' : 'failed',e.code);
+      const retry = e.retryable && job.attempts<this.memory.config.llm.maxAttempts;
+      this.repository.finishJob(job.id,job.lease_token!,e.code==='CONFLICT' ? 'stale' : retry ? 'pending' : 'failed',e.code);
       throw e;
     }
   }
@@ -76,12 +80,14 @@ export class EnrichmentService {
     if (!this.provider) return { enabled:false,completed:0,failed:0,deferred:0 };
     let completed=0,failed=0,deferred=0;
     for (let i=0;i<limit;i++) {
-      const job=this.repository.claimJob(scope,this.leaseMs());if (!job) break;
+      const job=this.repository.claimJob(scope,this.leaseMs(),undefined,this.memory.config.llm.maxAttempts);if (!job) break;
       try { await this.execute(job,scope);completed++; }
       catch (error) {
-        // Provider retries already ran. Leave this job queued and stop the batch;
-        // another explicit maintenance pass can retry without cycling the queue.
-        if (asAppError(error).retryable) { deferred++;break; }
+        // Stop on provider outage even when this job exhausted its budget.
+        if (asAppError(error).retryable) {
+          if (job.attempts<this.memory.config.llm.maxAttempts) deferred++; else failed++;
+          break;
+        }
         failed++;
       }
     }

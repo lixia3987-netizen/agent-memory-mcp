@@ -22,7 +22,7 @@ export interface IntelligenceRepository {
   saveEnrichment(value: Enrichment, scope: Scope): boolean;
   markApplied(id: string, hash: string, scope: Scope): boolean;
   enqueue(memory: Memory, restart?: boolean): Job;
-  claimJob(scope: Scope, leaseMs: number, id?: string): Job | null;
+  claimJob(scope: Scope, leaseMs: number, id?: string, maxAttempts?: number): Job | null;
   ownsJob(id: string, token: string): boolean;
   finishJob(id: string, token: string, status: string, error?: string): void;
   saveMerge(target: Memory, source: Memory): void;

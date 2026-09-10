@@ -2,11 +2,11 @@
 
 基于 Node.js 24、TypeScript、官方 MCP TypeScript SDK 和 SQLite 的本地长期记忆服务。
 
-**当前版本：0.2.2，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本次代码 897d6fb 的 [Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34430296053) 均已通过；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
+**当前版本：0.2.3，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 112 项测试通过，本次 Ubuntu/Windows CI 待验证；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
 
 核心运行不需要 Docker、WSL、虚拟机、外部数据库、Python、JDK、VC++ 构建工具或 API Key。默认使用 stdio，不监听端口，不发送遥测。Embedding/LLM 默认关闭；只有显式启用后，相应操作才会把输入发送到所配置的服务。本地 HTTP 也需要显式配置并启用。
 
-0.2.2 修复凭据漏检、过期去重、导入默认值与时间戳、关系更新冲突、任务重试及配置/文件读取边界。新增 21 项回归测试，本地全量 94 项通过。逐项说明见 [REVIEW_FIXES-v0.2.2.md](docs/REVIEW_FIXES-v0.2.2.md)。从 0.2.1 升级不新增迁移，schema 保持 104。
+0.2.3 修复本轮 8 项问题：失效事实参与冲突、parallel 更新回归、任务无限重试、历史导入 hash 误跳过、中文混合短词搜索、脱敏引号、冲突引用容量及软删导入行为。新增 18 项回归测试，全量 112 项通过。详见 [REVIEW_FIXES-v0.2.3.md](docs/REVIEW_FIXES-v0.2.3.md)。从 0.2.2 升级无需新增配置或迁移，schema 保持 104；任务执行次数默认最多 3 次。
 
 0.2.1 是前一轮代码审查修订版：强化仓储 scope 校验、同步事务契约和诊断，修复熔断计数，统一配置与版本来源。逐项结论见 [REVIEW_FIXES-v0.2.1.md](docs/REVIEW_FIXES-v0.2.1.md)。从 0.2.0 升级不新增数据库迁移，schema 仍为 v104；新增配置均有默认值。
 
@@ -121,7 +121,7 @@ Claude Code、Cursor 等客户端支持本地 stdio MCP。Codex、Hermes 或其�
 {"namespace":"work","project":"memory-mcp","query":"SQLite","limit":10}
 ```
 
-FTS 使用 BM25，并对重要度和新近程度作小幅乘法加权，只有全文匹配的记录能参与排序。query 中空白分隔的词采用字面量 AND 查询，不开放原始 FTS 运算符。常规检索用 unicode61；含中文且每个查询片段至少三个字符时使用 trigram，支持正文中的中文短语子串。一个或两个汉字的任意子串搜索不保证命中；一期没有完整中文分词。score 仅用于同次查询排序，不应视为跨查询的概率。
+FTS 使用 BM25，并对重要度和新近程度作小幅乘法加权，只有满足全部查询词的记录能参与排序。query 中空白分隔的词采用字面量 AND 查询，不开放原始 FTS 运算符。常规检索用 unicode61；含汉字时，至少三个 Unicode 字符的词用 trigram，较短词用字面子串过滤，保留 AND 语义。例如 AI 大模型 可以匹配这是AI大模型的说明。全是短词的中文查询扫描已过滤作用域，按重要度/新近度排序，未做完整中文分词；大库建议加入至少三个字符的词以使用索引。短词过滤支持 ASCII 大小写折叠，%/_ 不作为通配符。score 仅用于同次查询排序，不应视为跨查询的概率。
 
 软删除与过期记录默认从列表、搜索、导出排除。get 可以读取过期记录并标记状态。去重将 NFC Unicode 和连续空白标准化，仅用于 hash，原始正文保持原样；已删除或已过期记录不阻止重新添加；过期记录保留原 ID，新添加的活跃记录使用新 ID。若要延续原记录，请显式更新其 TTL。
 
@@ -156,7 +156,7 @@ Claude importer 仅扫描 memory 目录中的 Markdown，忽略无关项目文�
 | `update` | 文件内容变化后更新对应记录，保留 ID；导入的时间和 metadata 存在时按输入保存；缺失的 TTL/importance 保留旧值 |
 | `copy` | 冲突时创建新 ID，metadata 记录 copiedFromId；相同文件版本再次执行仍跳过 |
 
-文件路径、分段 key、文件 hash 和目标作用域共同记录导入来源。不同作用域已占用的 ID 不会被覆盖；可用 copy 显式重新分配。被手动删除的记录不会因为原文件再次导入而自动复活。内容发生变化后用 update 导入普通 Markdown，仍保留原删除状态；JSON 可以显式传 deleted_at。
+文件路径、分段 key、文件 hash 和目标作用域共同记录导入来源。不同作用域已占用的 ID 不会被覆盖；可用 copy 显式重新分配。被手动删除的记录不会因为原文件再次导入而自动复活。update 遇到软删记录时跳过且不修改，统计为 skipped；只有显式 deleted_at: null 才恢复，并重新校验活跃正文去重。导入来源保留软删记录以阻止隐式重建；新导入的导出快照仍可保留其删除状态。同一文件 hash 只有在目标当前正文 hash 仍匹配时才跳过，因此 A→B→A 可通过 update 回退。
 
 所有记录先完成格式校验，之后每 100 条一个短事务；数据库冲突导致后续批次失败时，先前已提交批次保留，错误说明已提交数量。重新执行使用来源记录避免重复。dry-run 使用回滚事务模拟同批去重与冲突，期间短暂持有写锁，适合分批预览。
 

@@ -83,7 +83,8 @@ export class ImportService {
       const scope = { namespace: item.record.namespace!, project: item.record.project ?? null } satisfies Scope;
       const origin = { ...scope, source_path: item.file.path, item_key: item.key, file_hash: item.file.hash };
       const exact = repo.importOrigin(origin, true);
-      if (exact) { stats.skipped++; return; }
+      const hash = contentHash(scope.namespace,scope.project,item.record.content);
+      if (exact?.content_hash === hash && !(exact.deleted_at && item.record.deleted_at === null)) { stats.skipped++; return; }
       const previous = repo.importOrigin(origin, false);
       let existing = previous && previous.namespace === scope.namespace && previous.project === scope.project ? previous : null;
       if (!existing && item.record.id) existing = repo.find(item.record.id, scope, true);
@@ -94,6 +95,9 @@ export class ImportService {
       if (existing && v.conflict === 'skip') { stats.skipped++; return; }
       if (existing && v.conflict === 'update') {
         const record = item.record;
+        // Provenance must retain tombstones so reimport cannot silently recreate them.
+        // Only an explicit deleted_at:null may restore and update a deleted memory.
+        if (existing.deleted_at && record.deleted_at !== null) { stats.skipped++; return; }
         const next = this.memory.policy.apply({ ...existing, ...record, id: existing.id, namespace: existing.namespace, project: scope.project,
           type: record.type ?? existing.type, title: record.title === undefined ? existing.title : record.title,
           tags: record.tags ?? existing.tags, source: record.source ?? existing.source, importance: record.importance ?? existing.importance,

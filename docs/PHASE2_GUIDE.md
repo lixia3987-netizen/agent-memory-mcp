@@ -1,4 +1,4 @@
-# 二期使用指南 · 0.2.2
+# 二期使用指南 · 0.2.3
 
 ## 直接开始使用
 
@@ -96,7 +96,9 @@ node dist/index.js serve
 - `supersede`：必须显式提供一个旧 relation ID，事务化替代。其他重叠替代项仍作为冲突保留。
 - `parallel`：明确允许同一时间并存，例如项目同时使用多项技术。
 
-修改关系 valid_to/status 或恢复已删除关系时，会重新标记当前未封存事实之间的重叠冲突。已 superseded 的历史记录不再作为新冲突的修改目标；已有冲突标记与降置信度保留，不自动推断如何消解。parallel 关系仅编辑普通属性时维持并存，修改有效期或状态时仍重新检查重叠。
+修改 valid_to/status、刷新来源或恢复关系时，只把本次修改新产生的重叠标为冲突；已存在且未标冲突的重叠保留 parallel 意图。已有的、仍重叠的冲突不能通过改 status/attributes 清除。重新激活、恢复或刷新失效来源会重新参与冲突检测。检测双方必须拥有未删除的实体与当前有效来源，排除 stale、过期/删除来源、跨域及 superseded 事实；历史查询仍可显式查看。历史冲突标记与降置信度不自动消解。
+
+关系 attributes 的普通字段仍限制 16 KiB；系统 conflict_with 单独允许最多 1000 个 UUID（约 39 KiB），不占普通字段额度。实体属性上限不变。超过重叠事实或引用数量上限会报错并回滚。
 
 实体唯一性依据 scope + type + 标准化名称，aliases 用于查找。别名同样按 NFKC、大小写和空白规范化去重，保留首次拼写与输入顺序，返回数组与落库一致。实体重复添加时返回原记录；要追加别名请用 entity_update。关系绑定 source_memory_id 时必须同 scope，系统记录该次正文 hash。普通 Memory 更新会让旧派生事实从“当前事实”中隐藏，但不删除历史。
 
@@ -180,7 +182,9 @@ node dist/index.js maintenance --action enrichment-jobs --namespace work --proje
 
 没有隐式常驻 worker，也没有系统级定时任务；worker 由显式维护操作执行。网络调用按 timeout/retries 限制，失败任务可重新 enqueue。进程中断后，未过期租约先等待，过期后可重新领取。
 
-批量 enrichment 遇到 retryable 故障时，将当前任务恢复 pending、停止本轮，返回 deferred=1；下次执行 maintenance enrichment-jobs --apply 可继续。不可重试错误仍为 failed，正文版本冲突仍为 stale。旧版已标 failed 的任务不自动猜测错误是否瞬时，可显式 enrich --action enqueue 或 run 重入队。
+llm.maxAttempts 默认 3，允许 1–100，限制一个任务跨多轮维护的执行次数；它与单次 HTTP 请求的 retries 分开计算。批量 enrichment 遇到 retryable 故障时停止本轮：未耗尽预算则恢复 pending 并返回 deferred=1，达到上限则转 failed 并计入 failed。熔断期间的执行也消耗任务预算，避免无限 pending。不可重试错误直接 failed，正文版本冲突仍为 stale。
+
+claim 同时退休旧版已超限的 pending 任务和已过期的最终租约，保护仍有效的租约及其他作用域；回收过期租约也计入 attempts。work 不自动重启 failed；显式 enrich --action enqueue 或 run 可以重启 failed/stale 并重置预算。对 pending/running 重复 enqueue/run 不重置 attempts。失败原因保留为安全错误码。系统没有后台自动重试，下一轮维护仍须显式执行。
 
 ## 策略、Importer、维护与可观测性
 
@@ -188,7 +192,7 @@ node dist/index.js maintenance --action enrichment-jobs --namespace work --proje
 
 policy 支持 rejectTypes/rejectSources/rejectNamespaces、minimumImportance、maxContentBytes、defaultTtlDays、typeDefaults、duplicateThreshold 和秘密检测。默认保留一期 importance=5 与无 TTL 的语义，不自动提高 decision 的重要度；示例可自行配置。
 
-secretDetection 默认为 true、secretAction 为 reject。凭据检测不再要求值至少 8 字符，支持标点和引号内空格。redact 模式针对 Memory 正文/标题/metadata 脱敏；metadata 的敏感键直接隐藏整个值（包括短字符串、数字和容器）；图谱属性及 LLM 输出中匹配的秘密仍拒绝。规则检测不能保证识别全部秘密。自定义 regex 是本机可信配置，应使用简单、有界模式。策略覆盖新增、更新和导入；不会批量改写历史数据库。
+secretDetection 默认为 true、secretAction 为 reject。凭据检测不再要求值至少 8 字符，支持标点和引号内空格，脱敏未加引号的凭据时保留外层 JSON/文本引号。redact 模式针对 Memory 正文/标题/metadata 脱敏；metadata 的敏感键直接隐藏整个值（包括短字符串、数字和容器）；图谱属性及 LLM 输出中匹配的秘密仍拒绝。规则检测不能保证识别全部秘密。自定义 regex 是本机可信配置，应使用简单、有界模式。策略覆盖新增、更新和导入；不会批量改写历史数据库。
 
 ```powershell
 node dist/index.js importers

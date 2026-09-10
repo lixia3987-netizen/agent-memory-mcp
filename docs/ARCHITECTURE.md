@@ -1097,6 +1097,7 @@ type AppConfig = {
   }
 
   llm?: {
+    maxAttempts?: number // 0.2.3：任务执行次数，默认 3；不同于 HTTP retries
     enabled: boolean
     baseUrl?: string
     model?: string

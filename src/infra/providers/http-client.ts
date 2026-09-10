@@ -1,9 +1,9 @@
-import type { AppConfig } from '../../app/config.ts';
+import type { ProviderConfig } from '../../domain/phase2-config.ts';
 import { AppError } from '../../shared/errors.ts';
 
 export class ProviderHttpClient {
-  private config: AppConfig['llm']; private failures=0; private openUntil=0;
-  constructor(config: AppConfig['llm']) { this.config=config; }
+  private config: ProviderConfig; private failures=0; private openUntil=0;
+  constructor(config: ProviderConfig) { this.config=config; }
   async post(route: string, body: unknown, signal?: AbortSignal): Promise<unknown> {
     if (Date.now()<this.openUntil) throw new AppError('PROVIDER_UNAVAILABLE','Provider circuit is temporarily open. Retry after cooldown.',true);
     let lastRetryable=true;

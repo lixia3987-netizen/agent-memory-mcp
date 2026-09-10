@@ -11,13 +11,17 @@ const providerBase = z.object({
   maxResponseBytes: z.number().int().min(1024).max(16777216).default(4194304),
   allowInsecureHttp: z.boolean().default(false),
 }).strict();
+export type ProviderConfig = z.infer<typeof providerBase>;
 export const embeddingConfigSchema = providerBase.extend({
   dimensions: z.number().int().min(1).max(8192).optional(),
   batchSize: z.number().int().min(1).max(64).default(16),
   maxCandidates: z.number().int().min(1).max(20000).default(5000),
   maxVectorBytes: z.number().int().min(1024).max(134217728).default(33554432),
 }).prefault({});
-export const llmConfigSchema = providerBase.prefault({});
+export const llmConfigSchema = providerBase.extend({
+  // Job executions across maintenance passes, separate from per-request HTTP retries.
+  maxAttempts: z.number().int().min(1).max(100).default(3),
+}).prefault({});
 export const duplicatesConfigSchema = z.object({
   // Serialized memory candidates and vector BLOBs have separate budgets.
   maxCandidateBytes: z.number().int().min(1024).max(67108864).default(8388608),

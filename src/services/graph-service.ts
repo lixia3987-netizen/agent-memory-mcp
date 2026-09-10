@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { entityAddSchema, entityIdSchema, entityUpdateSchema, entitySearchSchema, relationAddSchema, relationUpdateSchema, relationSearchSchema,
-  linkSchema, neighborsSchema, pathSchema, atTimeSchema, canonicalName, attributesSchema } from '../domain/graph.ts';
+  linkSchema, neighborsSchema, pathSchema, atTimeSchema, canonicalName, relationAttributesSchema } from '../domain/graph.ts';
 import type { Entity, Relation } from '../domain/graph.ts';
 import type { Filters, Scope } from '../domain/memory.ts';
 import type { GraphRepository } from '../repositories/graph-repository.ts';
@@ -74,8 +74,9 @@ export class GraphService {
   private markConflict(old: Relation, fresh: Relation, now: string): void {
     const a = new Set(Array.isArray(old.attributes?.conflict_with) ? old.attributes.conflict_with.filter(x => typeof x === 'string') as string[] : []); a.add(fresh.id);
     const b = new Set(Array.isArray(fresh.attributes?.conflict_with) ? fresh.attributes.conflict_with as string[] : []); b.add(old.id);
-    const oldAttributes = attributesSchema.parse({ ...old.attributes,conflict_with:[...a] });
-    fresh.attributes = attributesSchema.parse({ ...fresh.attributes,conflict_with:[...b] }); fresh.status='conflict'; fresh.confidence=Math.min(fresh.confidence,0.5);
+    if (a.size>1000 || b.size>1000) throw new AppError('CONFLICT','Too many conflict references. Resolve existing conflicts first.');
+    const oldAttributes = relationAttributesSchema.parse({ ...old.attributes,conflict_with:[...a] });
+    fresh.attributes = relationAttributesSchema.parse({ ...fresh.attributes,conflict_with:[...b] }); fresh.status='conflict'; fresh.confidence=Math.min(fresh.confidence,0.5);
     this.repository.saveRelation({ ...old,attributes:oldAttributes,status:old.superseded_by ? 'superseded' : 'conflict',confidence:Math.min(old.confidence,0.5),updated_at:now },false);
   }
   relationSearch(input: unknown) {
@@ -100,10 +101,19 @@ export class GraphService {
       if (!next.deleted_at) { this.entityGet({ ...scope,id:next.source_entity_id }); this.entityGet({ ...scope,id:next.target_entity_id }); }
       this.memory.policy.checkSecrets(JSON.stringify(next));
       if (!next.deleted_at && next.status!=='inactive' && !next.superseded_by &&
-        ('valid_to' in updates || 'status' in updates || deleted===false || old.status==='conflict')) {
+        ('valid_to' in updates || 'status' in updates || 'source_memory_id' in updates || deleted===false || old.status==='conflict')) {
         const conflicts=this.repository.conflicts(next);
         if (conflicts.length>1000) throw new AppError('CONFLICT','Too many overlapping facts. Resolve existing conflicts first.');
-        for (const conflict of conflicts) this.markConflict(conflict,next,next.updated_at);
+        const previous = new Set(this.repository.conflicts(old).map(r=>r.id));
+        const marked = new Set(Array.isArray(old.attributes?.conflict_with) ? old.attributes.conflict_with : []);
+        for (const conflict of conflicts) {
+          // Existing unmarked overlap represents deliberate parallel facts. Preserve it.
+          // Existing marked conflicts still cannot be cleared by changing status/attributes.
+          if (!previous.has(conflict.id) || marked.has(conflict.id) ||
+            (Array.isArray(conflict.attributes?.conflict_with) && conflict.attributes.conflict_with.includes(old.id))) {
+            this.markConflict(conflict,next,next.updated_at);
+          }
+        }
       }
       this.repository.saveRelation(next,false); return next;
     });

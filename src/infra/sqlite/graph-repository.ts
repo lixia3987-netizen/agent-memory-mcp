@@ -80,9 +80,17 @@ export class SqliteGraphRepository implements GraphRepository {
     return this.db.prepare(`SELECT r.* ${this.relationFrom} WHERE ${sql} ORDER BY r.valid_from DESC,r.id LIMIT ? OFFSET ?`).all(...params,f.limit,f.offset).map(relation);
   }
   conflicts(r: Relation): Relation[] {
-    return this.db.prepare(`SELECT * FROM relations WHERE namespace=? AND project IS ? AND source_entity_id=? AND predicate=? AND target_entity_id<>? AND id<>?
-      AND deleted_at IS NULL AND status IN('active','conflict') AND superseded_by IS NULL AND (valid_to IS NULL OR valid_to>?) AND (? IS NULL OR valid_from<?) LIMIT 1001`)
-      .all(r.namespace,r.project,r.source_entity_id,r.predicate,r.target_entity_id,r.id,millis(r.valid_from),millis(r.valid_to),millis(r.valid_to)).map(relation);
+    // The supplied record may be an unsaved update. Its own evidence must also be current.
+    if (r.deleted_at || r.superseded_by || !['active','conflict'].includes(r.status) ||
+      !this.findEntity(r.source_entity_id,r) || !this.findEntity(r.target_entity_id,r)) return [];
+    if (r.source_memory_id && !this.db.prepare(`SELECT 1 FROM memories WHERE id=? AND namespace=? AND project IS ?
+      AND content_hash=? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at>?)`)
+      .get(r.source_memory_id,r.namespace,r.project,r.source_content_hash,Date.now())) return [];
+    const { sql,params } = this.where({ namespace:r.namespace,project:r.project,source_entity_id:r.source_entity_id,predicate:r.predicate,
+      history:true,include_deleted:false,include_inactive:false,include_stale:false,limit:1001,offset:0 });
+    return this.db.prepare(`SELECT r.* ${this.relationFrom} WHERE ${sql} AND r.target_entity_id<>? AND r.id<>?
+      AND r.status IN('active','conflict') AND r.superseded_by IS NULL AND (r.valid_to IS NULL OR r.valid_to>?) AND (? IS NULL OR r.valid_from<?) LIMIT 1001`)
+      .all(...params,r.target_entity_id,r.id,millis(r.valid_from),millis(r.valid_to),millis(r.valid_to)).map(relation);
   }
   edges(ids: string[], scope: Scope, at: string, direction: 'in' | 'out' | 'both', limit: number,includeStale=false): Relation[] {
     if (!ids.length) return [];

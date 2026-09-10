@@ -6,7 +6,7 @@ const keyPattern = /\b(?:sk-(?:proj-|ant-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0
 const privateKey = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?(?:-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|$)/g;
 // Values may contain punctuation, escaped quotes, or (when quoted) spaces.
 // Sensitive names are the signal; short credentials must not bypass policy.
-const credential = /(\b["']?(?:password|passwd|api[_-]?key|access[_-]?token|secret|authorization)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:Bearer|Basic)\s+[^\s,;}\]]+|\[REDACTED\]|[^\s,;}\]]+)/gi;
+const credential = /(\b["']?(?:password|passwd|api[_-]?key|access[_-]?token|secret|authorization)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:Bearer|Basic)\s+[^\s,;}\]"']+|\[REDACTED\]|[^\s,;}\]"']+)/gi;
 const sensitiveName = /^(?:password|passwd|api[_-]?key|access[_-]?token|secret|authorization)$/i;
 export class PolicyEngine {
   private config: AppConfig['policy']; private custom: RegExp[];

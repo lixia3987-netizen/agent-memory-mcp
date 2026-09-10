@@ -72,16 +72,29 @@ export class SqliteIntelligenceRepository implements IntelligenceRepository {
   }
   enqueue(m: Memory,restart=false): Job {
     const now=Date.now();
+    const reset="(enrichment_jobs.status IN('failed','stale') OR (? AND enrichment_jobs.status='completed'))";
     this.db.prepare(`INSERT INTO enrichment_jobs(id,memory_id,content_hash,status,created_at,updated_at) VALUES(?,?,?,'pending',?,?)
-      ON CONFLICT(memory_id,content_hash) DO UPDATE SET status=CASE WHEN enrichment_jobs.status IN('failed','stale') OR (? AND enrichment_jobs.status<>'running') THEN 'pending' ELSE enrichment_jobs.status END,updated_at=excluded.updated_at`).run(randomUUID(),m.id,m.content_hash,now,now,Number(restart));
+      ON CONFLICT(memory_id,content_hash) DO UPDATE SET
+      status=CASE WHEN ${reset} THEN 'pending' ELSE enrichment_jobs.status END,
+      attempts=CASE WHEN ${reset} THEN 0 ELSE enrichment_jobs.attempts END,
+      lease_until=CASE WHEN ${reset} THEN NULL ELSE enrichment_jobs.lease_until END,
+      lease_token=CASE WHEN ${reset} THEN NULL ELSE enrichment_jobs.lease_token END,
+      last_error=CASE WHEN ${reset} THEN NULL ELSE enrichment_jobs.last_error END,updated_at=excluded.updated_at`)
+      .run(randomUUID(),m.id,m.content_hash,now,now,...Array<number>(5).fill(Number(restart)));
     return decodeJob(this.db.prepare('SELECT * FROM enrichment_jobs WHERE memory_id=? AND content_hash=?').get(m.id,m.content_hash)!);
   }
-  claimJob(scope: Scope,leaseMs: number,id?: string): Job | null {
+  claimJob(scope: Scope,leaseMs: number,id?: string,maxAttempts=3): Job | null {
+    if (!Number.isInteger(maxAttempts) || maxAttempts<1 || maxAttempts>100) throw new AppError('VALIDATION_ERROR','maxAttempts must be an integer between 1 and 100.');
     const now=Date.now(); const token=randomUUID();
+    // Retire legacy pending jobs and abandoned final leases; never touch a live lease.
+    this.db.prepare(`UPDATE enrichment_jobs SET status='failed',last_error=coalesce(last_error,'MAX_ATTEMPTS'),lease_until=NULL,lease_token=NULL,updated_at=?
+      WHERE attempts>=? AND (status='pending' OR (status='running' AND (lease_until IS NULL OR lease_until<=?)))
+      AND memory_id IN(SELECT id FROM memories WHERE namespace=? AND project IS ?) ${id ? 'AND id=?' : ''}`)
+      .run(now,maxAttempts,now,scope.namespace,scope.project,...(id ? [id] : []));
     const row=this.db.prepare(`UPDATE enrichment_jobs SET status='running',attempts=attempts+1,lease_until=?,lease_token=?,updated_at=? WHERE id=(
       SELECT j.id FROM enrichment_jobs j JOIN memories m ON m.id=j.memory_id WHERE m.namespace=? AND m.project IS ? AND m.deleted_at IS NULL AND (m.expires_at IS NULL OR m.expires_at>?) AND m.content_hash=j.content_hash
-      AND (j.status='pending' OR (j.status='running' AND j.lease_until<?)) ${id ? 'AND j.id=?' : ''} ORDER BY j.updated_at,j.id LIMIT 1) RETURNING *`)
-      .get(now+leaseMs,token,now,scope.namespace,scope.project,now,now,...(id ? [id] : []));
+      AND j.attempts<? AND (j.status='pending' OR (j.status='running' AND (j.lease_until IS NULL OR j.lease_until<=?))) ${id ? 'AND j.id=?' : ''} ORDER BY j.updated_at,j.id LIMIT 1) RETURNING *`)
+      .get(now+leaseMs,token,now,scope.namespace,scope.project,now,maxAttempts,now,...(id ? [id] : []));
     return row ? decodeJob(row) : null;
   }
   finishJob(id: string,token: string,status: string,error?: string): void {

@@ -1,10 +1,10 @@
-# 实现状态：0.2.3
+# 实现状态：0.2.2
 
 日期：2026-09-10。基于用户提供的一期/二期需求和架构，以及已交付的 0.1.0 继续实现。
 
 ## 本次结果
 
-二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。Linux 本地类型检查、构建和 112 项测试通过。本次 Ubuntu/Windows CI 待验证。用户 Windows 10/11 实机客户端接入、真实供应商模型和规模性能尚待验证，因此尚未满足正式 Release 的全部完成定义。
+二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。Linux 本地类型检查、构建和 94 项测试通过。本次代码 897d6fb 的 Ubuntu/Windows CI 与 release-gate 均已通过。用户 Windows 10/11 实机客户端接入、真实供应商模型和规模性能尚待验证，因此尚未满足正式 Release 的全部完成定义。
 
 | 阶段 | 状态 | 实现与证据 |
 | --- | --- | --- |
@@ -21,13 +21,9 @@
 | P2-9 Importer 插件接口 | 已实现并测试 | extensions / detectVersion / parse / register；JSON、Markdown、Claude Code |
 | P2-10 Policy / Maintenance / Metrics | 已实现并测试 | 秘密规则、大小/来源/类型/TTL 等策略；维护与本地指标 |
 | P2-11 可选 HTTP | 已实现并测试 | 官方 SDK 无状态 Streamable HTTP、loopback、令牌和 Host/Origin/大小/并发限制 |
-| P2-12 Windows 回归 | **本次 CI 待验证，用户实机待验** | 0.2.2 的验证记录已保留历史快照 |
+| P2-12 Windows 回归 | **CI 通过，用户实机待验** | [897d6fb 的 Windows Node 24 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34430296053) 全套测试、doctor/init 与 smoke 通过 |
 
-## 0.2.3 审查修订
-
-修复本轮 8 项反馈，包括上轮 parallel 更新和 enrichment 重试回归。冲突只处理当前有效且新增的重叠，重试默认最多 3 次，来源 hash 与当前正文核对，软删更新跳过，中文长词索引与短词过滤组合，脱敏保留引号，关系冲突引用独立限额。新增 18 项回归测试，全量 112 项通过，schema 仍为 104。详见 [REVIEW_FIXES-v0.2.3.md](REVIEW_FIXES-v0.2.3.md)。
-
-## 0.2.2 审查修订（历史）
+## 0.2.2 审查修订
 
 复核并修复本轮 15 项问题：凭据检测与 metadata 脱敏、活跃去重排除过期记录、关系更新冲突及封存历史保护、imports strict 与路径/IO 校验、导入时间戳和缺失字段合并、enrichment 可重试任务保留、迁移备份锁范围、历史查询和别名一致性、受限文件读取。详见 [REVIEW_FIXES-v0.2.2.md](REVIEW_FIXES-v0.2.2.md)。
 
@@ -52,13 +48,13 @@
 - Node.js 24.19.0 / TypeScript 5.9.3 / pnpm 11.19.0 / Linux。
 - 官方 MCP TypeScript SDK 1.30.0，未新增需原生构建的依赖。
 - pnpm typecheck、pnpm build、pnpm test 通过。
-- 112 项测试通过，0 失败、0 跳过；详见 VALIDATION.md。
+- 94 项测试通过，0 失败、0 跳过；详见 VALIDATION.md。
 - 真实 stdio/HTTP MCP 客户端和本地模拟供应商 HTTP 联调均通过。
 - 所有测试使用临时数据，不调用真实云模型，不读写用户的记忆数据。
 
 ## 明确边界
 
-1. 本次 Windows CI 待验证；用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
+1. Windows CI 已通过，用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
 2. 未执行 5 万/10 万条 Memory、10 万 Entity/50 万 Relation 的性能基准，不能宣称达到原文档 P95/RSS 目标。
 3. 默认向量检索是受数量与内存预算约束的本地余弦计算，不是 ANN 或 SQLite 向量扩展；结果可截断。
 4. memory_at_time 查询关系事实，未实现所有 Memory 正文的通用版本历史；合并原快照另行保存。

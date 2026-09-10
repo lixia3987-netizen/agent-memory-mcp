@@ -1,6 +1,6 @@
 {
   "name": "agent-memory-mcp",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "Local-first memory MCP server for Node.js 24 and Windows",
   "type": "module",

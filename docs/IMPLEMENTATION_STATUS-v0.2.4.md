@@ -1,12 +1,10 @@
-# 实现状态：0.2.5
+# 实现状态：0.2.4
 
 日期：2026-09-10。基于用户提供的一期/二期需求和架构，以及已交付的 0.1.0 继续实现。
 
 ## 本次结果
 
-二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。本轮修复独立审查确认的两个 P1 和一个 P2 问题，新增 12 项有复现依据的回归测试；Linux 本地 typecheck、build 和 136 项测试通过。本次提交的 Windows 状态见[修复分支 Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions?query=branch%3Afix%2Freview-lifecycle-v025)，不能用前版 CI 代替当前提交的验证。
-
-用户 Windows 10/11 实机客户端和真实供应商尚未联调；5 万条合成数据已做基准，常见词查询存在性能缺口，尚未满足正式 Release 的全部完成定义。
+二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。Linux 本地类型检查、构建和 124 项测试通过。[代码 21cb926 的 Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34456011313) 均通过。用户 Windows 10/11 实机客户端接入、真实供应商模型和规模性能尚待验证，因此尚未满足正式 Release 的全部完成定义。
 
 | 阶段 | 状态 | 实现与证据 |
 | --- | --- | --- |
@@ -23,19 +21,9 @@
 | P2-9 Importer 插件接口 | 已实现并测试 | extensions / detectVersion / parse / register；JSON、Markdown、Claude Code |
 | P2-10 Policy / Maintenance / Metrics | 已实现并测试 | 秘密规则、大小/来源/类型/TTL 等策略；维护与本地指标 |
 | P2-11 可选 HTTP | 已实现并测试 | 官方 SDK 无状态 Streamable HTTP、loopback、令牌和 Host/Origin/大小/并发限制 |
-| P2-12 Windows 回归 | **以本轮 CI 为准，用户实机待验** | CI 在当前修复分支上执行 136 项测试、doctor/init 与 smoke |
+| P2-12 Windows 回归 | **CI 通过，用户实机待验** | [21cb926 的 Windows CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34456011313)：124 项测试、doctor/init 与 smoke 通过 |
 
-## 0.2.5 独立审查修订
-
-- 合并仅给版本仍匹配且未退休的关系迁移来源；旧来源和目标的 stale 关系、已结束/删除/inactive 关系保留原证据。未来生效的 supersede 仍遵守原区间。
-- 原样拼接且策略未改写正文时可保留有效关系；自定义正文或脱敏改写后，需要显式复核或重新 enrichment，不自动给旧关系换上新 hash。
-- HTTP transport 在工具结果处理完后统一关闭、释放名额；客户端断开不绕过实际工作并发预算。shutdown 先等任务结束再关闭应用数据库。
-- token 字段与 password 一样支持拒绝/脱敏，完整占位符、JSON 结构和普通 token 术语保持兼容。
-- 无新增依赖、配置或 migration。已有错误合并产生的关系不自动修写，需依据原快照/正文重新核验。
-
-细节见 [REVIEW_FIXES-v0.2.5.md](REVIEW_FIXES-v0.2.5.md)，性能工作单独见 [PERFORMANCE_PLAN.md](PERFORMANCE_PLAN.md)。
-
-## 0.2.4 审查修订（历史）
+## 0.2.4 审查修订
 
 复核本轮 7 个编号（2/6 同根因），修复完整脱敏占位符跨模式兼容、凭据内部/外层引号处理、派生统计有效来源、导入指标保留 100 行、Unicode 码点三元组和空 frontmatter。新增 12 项测试，包含更新/导入/合并、JSON 转义组合、恢复与 TTL 边界等，全量 124 项通过。无需新增配置或迁移。详见 [REVIEW_FIXES-v0.2.4.md](REVIEW_FIXES-v0.2.4.md)。
 
@@ -68,14 +56,14 @@
 - Node.js 24.19.0 / TypeScript 5.9.3 / pnpm 11.19.0 / Linux。
 - 官方 MCP TypeScript SDK 1.30.0，未新增需原生构建的依赖。
 - pnpm typecheck、pnpm build、pnpm test 通过。
-- 136 项测试通过，0 失败、0 跳过；详见 VALIDATION.md。
+- 124 项测试通过，0 失败、0 跳过；详见 VALIDATION.md。
 - 真实 stdio/HTTP MCP 客户端和本地模拟供应商 HTTP 联调均通过。
 - 所有测试使用临时数据，不调用真实云模型，不读写用户的记忆数据。
 
 ## 明确边界
 
-1. Windows CI 以本次分支/提交结果为准；用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
-2. 已执行约 5 万条合成 Memory 基准，高命中率英文 FTS P95 约 318ms；只读 SQL 原型有改善但未投入运行路径。10 万 Memory、10 万 Entity/50 万 Relation 及目标 Windows 规模仍未验收，不能宣称达到全部 P95/RSS 目标。
+1. 本次 Windows CI 已通过；用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
+2. 未执行 5 万/10 万条 Memory、10 万 Entity/50 万 Relation 的性能基准，不能宣称达到原文档 P95/RSS 目标。
 3. 默认向量检索是受数量与内存预算约束的本地余弦计算，不是 ANN 或 SQLite 向量扩展；结果可截断。
 4. memory_at_time 查询关系事实，未实现所有 Memory 正文的通用版本历史；合并原快照另行保存。
 5. memory_export 继续为 schemaVersion 1 的 Memory 导出。完整图谱/向量/任务/合并快照使用整个数据库 backup/restore。

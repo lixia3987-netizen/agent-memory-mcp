@@ -117,20 +117,30 @@ export class SqliteGraphRepository implements GraphRepository {
       WHERE ${sql} AND e.namespace=m.namespace AND e.project IS m.project AND e.deleted_at IS NULL AND me.entity_id IN(${entityIds.map(() => '?').join(',')}) ORDER BY m.importance DESC,m.updated_at DESC,m.id LIMIT ?`)
       .all(...params,...entityIds,limit).map(r => String(r.id));
   }
-  mergeLinks(targetId: string, sourceId: string, hash: string, scope: Scope): void {
+  mergeLinks(targetId: string, sourceId: string, hash: string, scope: Scope, sourceHash: string | null): void {
     transaction(this.db,()=>{
       // Merge sources are soft-deleted before their links are transferred.
-      const pair=this.db.prepare(`SELECT 1 FROM memories t JOIN memories s ON s.id=? WHERE t.id=? AND t.namespace=? AND t.project IS ?
+      const pair=this.db.prepare(`SELECT s.content_hash FROM memories t JOIN memories s ON s.id=? WHERE t.id=? AND t.namespace=? AND t.project IS ?
         AND s.namespace=t.namespace AND s.project IS t.project AND t.content_hash=? AND t.deleted_at IS NULL AND (t.expires_at IS NULL OR t.expires_at>?)`)
         .get(sourceId,targetId,scope.namespace,scope.project,hash,Date.now());
       if (!pair) throw new AppError('CONFLICT','Merge endpoints or target version are unavailable in the selected scope.');
+      if (sourceHash!==null && sourceId!==targetId && pair.content_hash!==sourceHash) throw new AppError('CONFLICT','Merge source version changed.');
       this.db.prepare(`INSERT OR IGNORE INTO memory_entities(memory_id,entity_id,role,confidence)
         SELECT ?,l.entity_id,l.role,l.confidence FROM memory_entities l JOIN entities e ON e.id=l.entity_id
-        WHERE l.memory_id=? AND e.namespace=? AND e.project IS ?`).run(targetId,sourceId,scope.namespace,scope.project);
-      this.db.prepare(`UPDATE relations SET source_memory_id=?,source_content_hash=? WHERE source_memory_id=? AND namespace=? AND project IS ?
+        WHERE l.memory_id=? AND e.namespace=? AND e.project IS ? AND e.deleted_at IS NULL
+        AND (? IS NOT NULL OR l.role<>'enriched')`).run(targetId,sourceId,scope.namespace,scope.project,sourceHash);
+      if (sourceHash===null) return;
+      // Stale and archived evidence keeps its original identity/hash. The target's
+      // pre-merge hash is supplied too, since its current content has already changed.
+      const now=Date.now();
+      this.db.prepare(`UPDATE relations SET source_memory_id=?,source_content_hash=?,updated_at=?
+        WHERE source_memory_id=? AND namespace=? AND project IS ? AND source_content_hash=?
+        AND deleted_at IS NULL AND status IN('active','conflict','superseded')
+        AND (valid_to IS NULL OR valid_to>?)
         AND EXISTS(SELECT 1 FROM entities s JOIN entities t ON t.id=relations.target_entity_id WHERE s.id=relations.source_entity_id
-          AND s.namespace=relations.namespace AND s.project IS relations.project AND t.namespace=relations.namespace AND t.project IS relations.project)`)
-        .run(targetId,hash,sourceId,scope.namespace,scope.project);
+          AND s.namespace=relations.namespace AND s.project IS relations.project AND t.namespace=relations.namespace AND t.project IS relations.project
+          AND s.deleted_at IS NULL AND t.deleted_at IS NULL)`)
+        .run(targetId,hash,now,sourceId,scope.namespace,scope.project,sourceHash,now);
     });
   }
   stats(scope: Scope): Record<string, number> {

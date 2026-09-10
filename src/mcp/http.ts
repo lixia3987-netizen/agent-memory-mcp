@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Application } from '../app/bootstrap.ts';
@@ -11,7 +12,8 @@ export async function serveHttp(app: Application) {
   const token=process.env[config.tokenEnv];
   if (!token || Buffer.byteLength(token)<32) throw new AppError('PERMISSION_DENIED','HTTP requires a bearer token of at least 32 bytes in the configured tokenEnv.');
   const expected=Buffer.from(`Bearer ${token}`);let active=0;let port=config.port;
-  const server=createServer({ requestTimeout:config.requestTimeoutMs,headersTimeout:config.headersTimeoutMs },async(req,res)=>{
+  const inFlight=new Set<Promise<void>>();
+  const handleRequest=async(req: IncomingMessage,res: ServerResponse): Promise<void>=>{
     const reject=(status:number,message:string)=>{ res.writeHead(status,{ 'Content-Type':'application/json','Cache-Control':'no-store' });res.end(JSON.stringify({ error:message })); };
     const host=config.host==='::1' ? '[::1]' : config.host;
     if (req.headers.host!==`${host}:${port}`) { reject(403,'Invalid Host');return; }
@@ -31,15 +33,31 @@ export async function serveHttp(app: Application) {
       let body: unknown;try { body=JSON.parse(Buffer.concat(chunks).toString('utf8')); }catch { reject(400,'Invalid JSON');return; }
       mcp=createMcpServer(app);
       const transport=new StreamableHTTPServerTransport({ sessionIdGenerator:undefined,enableJsonResponse:true });
-      res.once('close',()=>{ void mcp?.close(); });
+      // Keep the transport alive until its JSON response promise settles, even if
+      // the socket closes. Closing it early loses the SDK response resolver. Work
+      // already started must retain its concurrency slot until it actually ends.
       await mcp.connect(transport);await transport.handleRequest(req,res,body);
-    } catch { if (!res.headersSent) reject(500,'MCP request failed');else if (!res.writableEnded) res.end(); }
-    finally { active--;if (res.writableEnded) await mcp?.close(); }
+    } catch { if (!res.destroyed) { if (!res.headersSent) reject(500,'MCP request failed');else if (!res.writableEnded) res.end(); } }
+    finally { try { await mcp?.close(); } finally { active--; } }
+  };
+  const server=createServer({ requestTimeout:config.requestTimeoutMs,headersTimeout:config.headersTimeoutMs },(req,res)=>{
+    const operation=handleRequest(req,res);
+    inFlight.add(operation);
+    void operation.then(()=>inFlight.delete(operation),()=>{
+      inFlight.delete(operation);app.log('warn','http.cleanup_failed');
+    });
   });
   // Receipt deadlines above do not limit tool execution after the body arrives.
   // Model calls have provider deadlines; MCP clients may impose their own deadline.
   await new Promise<void>((resolve,reject)=>{ server.once('error',reject);server.listen(config.port,config.host,()=>{ server.off('error',reject);resolve(); }); });
   const address=server.address();if (address && typeof address==='object') port=address.port;
   const host=config.host==='::1' ? '[::1]' : config.host;
-  return { server,url:`http://${host}:${port}/mcp`,close:()=>new Promise<void>((resolve,reject)=>server.close(error=>error ? reject(error) : resolve())) };
+  let closing: Promise<void> | undefined;
+  const close=()=>closing ??= (async()=>{
+    await new Promise<void>((resolve,reject)=>server.close(error=>error ? reject(error) : resolve()));
+    // Disconnected tools may outlive their sockets. Drain them before the caller
+    // closes SQLite; new requests cannot enter after server.close has completed.
+    await Promise.allSettled(inFlight);
+  })();
+  return { server,url:`http://${host}:${port}/mcp`,close };
 }

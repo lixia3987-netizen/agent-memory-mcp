@@ -2,11 +2,13 @@
 
 基于 Node.js 24、TypeScript、官方 MCP TypeScript SDK 和 SQLite 的本地长期记忆服务。
 
-**当前版本：0.2.4，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 124 项测试通过，[代码 21cb926 的 Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34456011313) 均通过；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
+**当前版本：0.2.5，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 136 项测试通过；Windows CI 以[本次修复分支的 Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions?query=branch%3Afix%2Freview-lifecycle-v025) 为准。用户实际 Windows 客户端和真实模型仍需联调，不视为已完成正式 Release 验收。
 
 核心运行不需要 Docker、WSL、虚拟机、外部数据库、Python、JDK、VC++ 构建工具或 API Key。默认使用 stdio，不监听端口，不发送遥测。Embedding/LLM 默认关闭；只有显式启用后，相应操作才会把输入发送到所配置的服务。本地 HTTP 也需要显式配置并启用。
 
-0.2.4 修复本轮反馈：redact→reject 锁记录、引号脱敏残留、派生统计包含失效来源、导入指标保留边界、emoji 相似度误判和空 frontmatter。新增 12 项回归测试，全量 124 项通过。详见 [REVIEW_FIXES-v0.2.4.md](docs/REVIEW_FIXES-v0.2.4.md)。从 0.2.3 升级无需新增配置或迁移，schema 保持 104；已有脱敏记录可直接在 reject 模式下继续更新、导入和合并。
+0.2.5 按独立审查优先级修复：合并复活失效图谱事实、HTTP 取消请求导致并发名额泄漏、独立 token 字段漏检。新增 12 项回归，全量 136 项通过。详见 [REVIEW_FIXES-v0.2.5.md](docs/REVIEW_FIXES-v0.2.5.md)。无需新增配置或迁移，schema 保持 104。合并自定义改写的正文不会自动认证旧关系；HTTP 已开始的任务在结束前仍占用名额，服务关闭会等候这些任务完成。
+
+5 万条合成数据的高命中率英文 FTS 仍存在性能缺口。只读 SQL 原型已验证“先排序选页，再读取正文/生成摘要”值得实施，生产查询尚未替换；计划、数据和验收条件见 [PERFORMANCE_PLAN.md](docs/PERFORMANCE_PLAN.md)。
 
 0.2.1 是前一轮代码审查修订版：强化仓储 scope 校验、同步事务契约和诊断，修复熔断计数，统一配置与版本来源。逐项结论见 [REVIEW_FIXES-v0.2.1.md](docs/REVIEW_FIXES-v0.2.1.md)。从 0.2.0 升级不新增数据库迁移，schema 仍为 v104；新增配置均有默认值。
 

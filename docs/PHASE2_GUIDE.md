@@ -160,6 +160,10 @@ memory_merge 先预览：
 
 默认拼接正文并合并标签；也可显式传入整理后的 content/title。预览后任一记录内容或元数据变化，旧 token 失效。一次最多 20 个来源，只支持同 scope 内活跃记录。提交事务中保留原快照、软删除来源、更新目标，并转移关联，metadata 记录来源 ID/source/时间。普通恢复可恢复来源记录；没有自动“撤销整次合并”工具。显式 purge 关联记录时，相关合并快照按外键一并清理。
 
+从 0.2.5 起，只有原样拼接且策略未改写正文的合并才迁移仍有效的关系，并核对各来源和目标的合并前 content_hash。stale、已结束、inactive、已删除关系及删除端点不刷新证据；历史查询仍可追溯原来源。已 supersede 但尚未到结束时间的事实继续遵守原区间。
+
+显式整理 content 或策略脱敏改变正文时，旧关系不会自动获得新正文的 hash；需要重新 enrichment 或显式复核来源关系。显式普通实体链接仍按合并规则处理；enriched 派生链接在正文被改写时不转移。此修复不自动纠正旧版本已经刷新过 hash 的关系；若曾对带关系的记忆合并，请依据原正文/快照重新核验。
+
 ## 可选 LLM 增强
 
 配置 llm.enabled/baseUrl/model/apiKeyEnv，格式与 embedding 类似。程序调用 `/chat/completions` 并要求 JSON 对象输出。不同供应商可能需要适配具体模型的 JSON 输出能力；当前只做了本地兼容接口联调，没有验证你的真实供应商。
@@ -193,6 +197,8 @@ claim 同时退休旧版已超限的 pending 任务和已过期的最终租约�
 policy 支持 rejectTypes/rejectSources/rejectNamespaces、minimumImportance、maxContentBytes、defaultTtlDays、typeDefaults、duplicateThreshold 和秘密检测。默认保留一期 importance=5 与无 TTL 的语义，不自动提高 decision 的重要度；示例可自行配置。
 
 secretDetection 默认为 true、secretAction 为 reject。凭据检测不再要求值至少 8 字符，支持标点和引号内空格，脱敏区分凭据内部引号与外层字符串边界。有效 JSON 只重写变更的字符串片段，保留外层结构、排版、未修改的转义和大整数原文。未加引号的值以空白、逗号、分号或结构闭合符为界，内部引号属于值；开头带引号却未闭合时保守隐藏剩余值。redact 模式针对 Memory 正文/标题/metadata 脱敏；metadata 的敏感键直接隐藏整个值（包括短字符串、数字和容器）；图谱属性及 LLM 输出中匹配的秘密仍拒绝。规则检测不能保证识别全部秘密。自定义 regex 是本机可信配置，应使用简单、有界模式。策略覆盖新增、更新和导入；不会批量改写历史数据库。
+
+0.2.5 将独立 token 字段加入受保护名称，与 password/access_token 一样作用于正文赋值、JSON 和嵌套 metadata，大小写不敏感。token_count/tokenizer 和普通“token”术语不作为敏感字段。旧库不会自动扫描或改写；旧版存入的 token 明文在后续写入校验时可能被拒绝，应先移除真实值或显式采用 redact 处理。
 
 内置凭据规则只豁免完整的 [REDACTED] 值（包括引号包裹及 Authorization scheme），metadata 敏感键也允许这个精确占位值。redact→reject 后，原有脱敏记录的更新、import-update、merge 继续可用；占位符后缀、邻接的新凭据和自定义 secretPatterns 仍照常校验。JSON 结构保留针对内置凭据脱敏；会匹配 JSON 语法字符的自定义正则不保证此性质。
 
@@ -230,3 +236,5 @@ node dist/index.js serve --transport http --config "C:\AgentMemoryData\config\co
 memory_export 为兼容一期继续仅导出 Memory（schemaVersion 1）。完整图谱、时间事实、向量、合并快照、任务和指标都保存在 SQLite，使用 backup/restore 迁移完整数据库。手工图谱事实不一定能从 Memory 自动重建，应保留数据库备份。
 
 本地测试覆盖真实 SQLite、官方 MCP stdio/HTTP 客户端和模拟供应商 HTTP 服务。Windows 实机、真实模型质量/费用/限流/专有响应格式、5 万/10 万记录性能及长时间运行仍需后续验证。
+
+HTTP 客户端取消已接收的工具请求后，任务仍会在现有 Provider timeout/retries 等限制内完成；客户端断开不代表写入回滚。该任务在真正完成前继续占用并发名额，随后关闭 transport 并释放；不会因为反复取消绕过上限。正常停服会等待这些任务结束后再关闭数据库；进程强制终止不属于优雅停服。

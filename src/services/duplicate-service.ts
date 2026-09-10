@@ -44,7 +44,8 @@ export class DuplicateService {
       const { expired:targetExpired,...target }=this.memory.get({ ...scope,id:v.target_id });
       const sources=ids.map(id=>{ const {expired,...memory}=this.memory.get({ ...scope,id });if (expired) throw new AppError('CONFLICT','Merge sources must be active.');return memory; });
       if (targetExpired) throw new AppError('CONFLICT','Merge target must be active.');
-      const content=v.content ?? [target.content,...sources.map(m=>m.content)].join('\n\n---\n\n');
+      const combinedContent=[target.content,...sources.map(m=>m.content)].join('\n\n---\n\n');
+      const content=v.content ?? combinedContent;
       const tags=[...new Set([...(target.tags ?? []),...sources.flatMap(m=>m.tags)])];
       const previous=Array.isArray(target.metadata?.merge_sources) ? target.metadata.merge_sources : [];
       const updates=mutableSchema.parse({ content,title:v.title===undefined ? target.title : v.title,tags,
@@ -55,8 +56,11 @@ export class DuplicateService {
       if (v.proposal_token!==token) throw new AppError('CONFLICT','Merge proposal is missing or stale. Preview again and pass its proposal_token.');
       for (const source of sources) { this.repository.saveMerge(target,source);this.memory.delete({ ...scope,id:source.id }); }
       const result=this.memory.update({ ...scope,id:target.id,updates });
-      for (const source of sources) this.graph.mergeLinks(target.id,source.id,result.content_hash,scope);
-      this.graph.mergeLinks(target.id,target.id,result.content_hash,scope);
+      // Only an unchanged concatenation retains the evidence supporting current facts.
+      // Custom content or policy redaction requires explicit review/re-enrichment.
+      const preserveEvidence=result.content===combinedContent;
+      for (const source of sources) this.graph.mergeLinks(target.id,source.id,result.content_hash,scope,preserveEvidence ? source.content_hash : null);
+      this.graph.mergeLinks(target.id,target.id,result.content_hash,scope,preserveEvidence ? target.content_hash : null);
       this.memory.repository.audit(result,'merge');
       return { dry_run:false,memory:result,merged_ids:ids,originals_retained:true };
     });

@@ -10,7 +10,7 @@
 | pnpm test | **145 通过 / 0 失败 / 0 跳过** |
 | 初次完整测试耗时 | 约 4.21 秒，仅代表本测试套件 |
 | schema / 依赖 / 配置 | schema 105，新增覆盖索引迁移；无新增依赖或必填配置 |
-| Windows | 以[本次修复分支 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions?query=branch%3Afix%2Freview-lifecycle-v025) 的当前提交为准，不沿用旧版记录 |
+| Windows / Ubuntu CI | [代码提交 9c19cb8](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34463321642)：各 145/145 测试、doctor/init、smoke、5 万/10 万条基准和 release-gate 均通过 |
 | 真实云模型 / 用户客户端 | 本轮未联调 |
 
 ## 本轮新增 9 项回归
@@ -46,7 +46,7 @@ contract/http-lifecycle.test.ts：3 项。
 
 0.2.6 已替换正式查询，不再使用仅原型的 72.88ms 作为当前结果。`pnpm benchmark:search` 构建并测量正式服务，在全新临时库内生成 5 万/10 万条混合语言正文，旧新交替、3 次预热、30 次计时，每次结果与冻结旧查询比较；另用独立 HTTP 服务进程测量并发 get/stats 和事件循环延迟。
 
-CI 在 Ubuntu/Windows 执行相同脚本，上传 search-benchmark-* 原始分布和执行计划。性能绝对值受共享 runner 影响，CI 以结果一致性/脚本正常完成为硬门禁；P95 目标和实际值单独报告，不能把 CI 绿灯解释为所有环境 SLA。当前实测及边界见 [PERFORMANCE_PLAN.md](PERFORMANCE_PLAN.md)。
+CI 在 Ubuntu/Windows 执行相同脚本，上传 search-benchmark-* 原始分布和执行计划。性能绝对值受共享 runner 影响，CI 以结果一致性/脚本正常完成为硬门禁；P95 目标和实际值单独报告，不能把 CI 绿灯解释为所有环境 SLA。5 万条英文 FTS P95：Ubuntu 76.39ms、Windows 78.41ms，均达到 ≤150ms 建议目标；Windows 10 万条并发 stats 为 105.19ms，略超新增 ≤100ms 目标。完整实测及边界见 [PERFORMANCE_PLAN.md](PERFORMANCE_PLAN.md)。
 
 ## 验证命令
 
@@ -57,3 +57,5 @@ pnpm benchmark:search
 ```
 
 contract 测试使用 dist，不能省略 build。当前 Windows CI 的完整测试、doctor/init、smoke 仍是平台门禁；CI 不替代 Windows 10/11 实机客户端。历史证据保存在 [VALIDATION-v0.2.4.md](VALIDATION-v0.2.4.md)。
+
+代码验证对应 9c19cb8；后续提交仅补文档和性能证据，未改源代码/配置/测试/基准脚本。

@@ -4,7 +4,7 @@
 
 ## 本次结果
 
-二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。本轮修复独立审查确认的两个 P1 和一个 P2 问题，新增 12 项有复现依据的回归测试；随后完成正式 FTS 两阶段查询与 4 项等价性、4 项线程边界与 1 项 schema 104 升级回归；Linux 本地 typecheck、build 和 145 项测试通过。本次提交的 Windows 状态见[修复分支 Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions?query=branch%3Afix%2Freview-lifecycle-v025)，不能用前版 CI 代替当前提交的验证。
+二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。本轮修复独立审查确认的两个 P1 和一个 P2 问题，新增 12 项有复现依据的回归测试；随后完成正式 FTS 两阶段查询与 4 项等价性、4 项线程边界与 1 项 schema 104 升级回归；Linux 本地 typecheck、build 和 145 项测试通过。代码提交 9c19cb8 的 [Windows/Ubuntu CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34463321642) 均为 145/145，规模基准及 release-gate 也通过；后续仅补报告及原始证据。
 
 用户 Windows 10/11 实机客户端和真实供应商尚未联调；本轮将 FTS 原型投入正式查询并增加规模/并发基准。目标平台结果以当前提交 CI 和 PERFORMANCE_PLAN.md 为准，尚未满足正式 Release 的全部完成定义。
 
@@ -23,7 +23,7 @@
 | P2-9 Importer 插件接口 | 已实现并测试 | extensions / detectVersion / parse / register；JSON、Markdown、Claude Code |
 | P2-10 Policy / Maintenance / Metrics | 已实现并测试 | 秘密规则、大小/来源/类型/TTL 等策略；维护与本地指标 |
 | P2-11 可选 HTTP | 已实现并测试 | 官方 SDK 无状态 Streamable HTTP、loopback、令牌和 Host/Origin/大小/并发限制 |
-| P2-12 Windows 回归 | **以本轮 CI 为准，用户实机待验** | CI 在当前修复分支上执行 145 项测试、doctor/init、smoke 和 5 万/10 万条 FTS 基准 |
+| P2-12 Windows 回归 | **本轮 CI 通过，用户实机待验** | CI 在当前修复分支上执行 145 项测试、doctor/init、smoke 和 5 万/10 万条 FTS 基准 |
 
 ## 0.2.6 FTS 性能修订
 
@@ -85,7 +85,7 @@
 ## 明确边界
 
 1. Windows CI 以本次分支/提交结果为准；用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
-2. 旧查询 5 万条高命中率英文 FTS P95 约 318ms；0.2.6 已实施两阶段 SQL，新增 5 万/10 万 Memory 的可重现旧新对照及 HTTP 并发基准。当前结果见 PERFORMANCE_PLAN.md；10 万 Entity/50 万 Relation、真实语料和模型仍未验收，不能宣称达到全部 P95/RSS 目标。
+2. 旧查询 5 万条高命中率英文 FTS P95 约 318ms；0.2.6 已实施两阶段 SQL，新增 5 万/10 万 Memory 的可重现旧新对照及 HTTP 并发基准。本轮 5 万条英文 FTS P95 Ubuntu 76.39ms / Windows 78.41ms；Windows 10 万条并发 stats 105.19ms 略超建议目标，详见 PERFORMANCE_PLAN.md；10 万 Entity/50 万 Relation、真实语料和模型仍未验收，不能宣称达到全部 P95/RSS 目标。
 3. 默认向量检索是受数量与内存预算约束的本地余弦计算，不是 ANN 或 SQLite 向量扩展；结果可截断。
 4. memory_at_time 查询关系事实，未实现所有 Memory 正文的通用版本历史；合并原快照另行保存。
 5. memory_export 继续为 schemaVersion 1 的 Memory 导出。完整图谱/向量/任务/合并快照使用整个数据库 backup/restore。

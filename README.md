@@ -2,13 +2,13 @@
 
 基于 Node.js 24、TypeScript、官方 MCP TypeScript SDK 和 SQLite 的本地长期记忆服务。
 
-**当前版本：0.2.6，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 145 项测试通过；Windows CI 以[本次修复分支的 Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions?query=branch%3Afix%2Freview-lifecycle-v025) 为准。用户实际 Windows 客户端和真实模型仍需联调，不视为已完成正式 Release 验收。
+**当前版本：0.2.6，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 145 项测试通过；[代码提交 9c19cb8 的 Windows/Ubuntu CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34463321642) 均为 145/145，5 万/10 万条基准与 release-gate 也已通过。用户实际 Windows 客户端和真实模型仍需联调，不视为已完成正式 Release 验收。
 
 核心运行不需要 Docker、WSL、虚拟机、外部数据库、Python、JDK、VC++ 构建工具或 API Key。默认使用 stdio，不监听端口，不发送遥测。Embedding/LLM 默认关闭；只有显式启用后，相应操作才会把输入发送到所配置的服务。本地 HTTP 也需要显式配置并启用。
 
 0.2.5 按独立审查优先级修复：合并复活失效图谱事实、HTTP 取消请求导致并发名额泄漏、独立 token 字段漏检。新增 12 项回归，全量 136 项通过。详见 [REVIEW_FIXES-v0.2.5.md](docs/REVIEW_FIXES-v0.2.5.md)。该版本未新增配置或迁移，schema 为 104。合并自定义改写的正文不会自动认证旧关系；HTTP 已开始的任务在结束前仍占用名额，服务关闭会等候这些任务完成。
 
-0.2.6 将两阶段 FTS 查询用于正式检索，并以单个只读工作线程执行 MCP/CLI 词法搜索，保持协议线程响应；统计增加覆盖索引。全量 145 项测试通过。**从 schema 104 升级到 105 会先自动备份**；原始记录和历史迁移不变，旧版回退使用升级前备份恢复至新路径。运行 `pnpm benchmark:search` 可重现 5 万/10 万条旧新查询对照和独立进程 HTTP 并发测量，结果与边界见 [PERFORMANCE_PLAN.md](docs/PERFORMANCE_PLAN.md)。
+0.2.6 将两阶段 FTS 查询用于正式检索，并以单个只读工作线程执行 MCP/CLI 词法搜索，保持协议线程响应；统计增加覆盖索引。全量 145 项测试通过。**从 schema 104 升级到 105 会先自动备份**；原始记录和历史迁移不变，旧版回退使用升级前备份恢复至新路径。运行 `pnpm benchmark:search` 可重现 5 万/10 万条旧新查询对照和独立进程 HTTP 并发测量，5 万条英文 FTS P95：Ubuntu 76ms、Windows 78ms；Windows 10 万条并发 stats 约 105ms，略超新增 100ms 建议目标。完整结果与边界见 [PERFORMANCE_PLAN.md](docs/PERFORMANCE_PLAN.md)。
 
 `search.workerEnabled` 默认 true；首次异步词法查询时才启动线程，无模型或网络依赖。`workerQueueLimit=20` 限制执行中与排队总数；`workerTimeoutMs=30000` 包含排队时间，超限返回可重试的 DATABASE_BUSY。同步程序接口 `memory.search()` 保留，MCP/CLI 和 lexical/fallback 使用 `searchAsync()`；真正 hybrid 的向量融合路径仍保留现有执行方式。
 

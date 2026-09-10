@@ -10,6 +10,7 @@ import { ClaudeCodeImporter } from '../importers/claude-code.ts';
 import { safeInputPath, safeRead } from '../shared/paths.ts';
 import { sha256, contentHash } from '../shared/hash.ts';
 import { AppError, asAppError } from '../shared/errors.ts';
+import { nextUpdatedAt } from './memory-time.ts';
 
 export class ImportService {
   private memory: MemoryService;
@@ -104,7 +105,8 @@ export class ImportService {
           expires_at: record.expires_at === undefined ? existing.expires_at : record.expires_at,
           deleted_at: record.deleted_at === undefined ? existing.deleted_at : record.deleted_at,
           metadata: record.metadata === undefined ? existing.metadata : record.metadata,
-          created_at: record.created_at ?? existing.created_at, updated_at: record.updated_at ?? new Date().toISOString(),
+          created_at: record.created_at ?? existing.created_at,
+          updated_at: record.updated_at ?? nextUpdatedAt(existing),
           content_hash: contentHash(scope.namespace, scope.project, record.content) },false);
         next.content_hash=contentHash(scope.namespace,scope.project,next.content);
         if (Date.parse(next.updated_at)<Date.parse(next.created_at)) throw new AppError('VALIDATION_ERROR','Imported updated_at cannot precede created_at.');

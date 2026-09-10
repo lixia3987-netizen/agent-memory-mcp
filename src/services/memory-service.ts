@@ -7,6 +7,7 @@ import type { AppConfig } from '../app/config.ts';
 import { contentHash } from '../shared/hash.ts';
 import { AppError } from '../shared/errors.ts';
 import { PolicyEngine } from '../domain/policy.ts';
+import { nextUpdatedAt } from './memory-time.ts';
 
 export class MemoryService {
   readonly repository: MemoryRepository;
@@ -58,7 +59,7 @@ export class MemoryService {
     return this.repository.transaction(() => {
       const old = this.get({ id: v.id, namespace: v.namespace, project: v.project });
       const { expired: _expired, ...base } = old;
-      const next: Memory = this.policy.apply({ ...base, ...mutableSchema.parse(v.updates), updated_at: new Date().toISOString() },false);
+      const next: Memory = this.policy.apply({ ...base, ...mutableSchema.parse(v.updates), updated_at: nextUpdatedAt(base) },false);
       next.content_hash = contentHash(next.namespace, next.project, next.content);
       if (this.repository.duplicate(next.content_hash, next, next.id)) throw new AppError('CONFLICT', 'Update would duplicate an existing active memory.');
       this.repository.replace(next); this.repository.audit(next, 'update'); return next;
@@ -69,7 +70,7 @@ export class MemoryService {
     return this.repository.transaction(() => {
       const { expired: _expired, ...memory } = this.get({ ...v, include_deleted: true });
       if (!memory.deleted_at) {
-        memory.deleted_at = memory.updated_at = new Date().toISOString();
+        memory.deleted_at = new Date().toISOString(); memory.updated_at = nextUpdatedAt(memory);
         this.repository.replace(memory); this.repository.audit(memory, 'delete');
       }
       return { id: memory.id, deleted_at: memory.deleted_at };
@@ -81,7 +82,7 @@ export class MemoryService {
       const { expired: _expired, ...memory } = this.get({ ...v, include_deleted: true });
       if (memory.deleted_at) {
         if (this.repository.duplicate(memory.content_hash, memory, memory.id)) throw new AppError('CONFLICT', 'An active duplicate exists; resolve it before restoring.');
-        memory.deleted_at = null; memory.updated_at = new Date().toISOString();
+        memory.deleted_at = null; memory.updated_at = nextUpdatedAt(memory);
         this.repository.replace(memory); this.repository.audit(memory, 'restore');
       }
       return memory;

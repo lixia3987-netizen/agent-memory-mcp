@@ -1,8 +1,10 @@
 # 验证记录 · 0.2.7
 
-PR #1 已合并，随后在 main 重新执行 typecheck/build/test。合并基线 145/145 通过；修复脱敏后大小校验并新增启用模型的完整 MCP/CLI 恢复流程后，本地 150/150 通过，0 失败、0 跳过，测试阶段约 6.65 秒。当前主分支 Windows/Ubuntu CI、需求覆盖矩阵和可用性结论见 [REVIEW-v0.2.7.md](REVIEW-v0.2.7.md)。
+PR #1 已合并，随后在 main 重新执行 typecheck/build/test。合并基线 145/145 通过；修复脱敏后大小校验及未来时钟的更新时间倒退，并新增启用模型的完整 MCP/CLI 恢复流程后，本地 153/153 通过，0 失败、0 跳过，测试阶段约 6.59 秒。当前主分支 Windows/Ubuntu CI、需求覆盖矩阵和可用性结论见 [REVIEW-v0.2.7.md](REVIEW-v0.2.7.md)。
 
 新增 `integration/policy-output.test.ts` 的 4 项测试验证变换后的限制、写入回滚、导入/合并不提交部分结果，以及成功脱敏记录的往返/跨模式更新。新增 `contract/enabled-workflow.test.ts` 使用编译后 stdio 服务、官方 MCP 客户端和真实本机 HTTP 模型接口，覆盖启用 embedding/LLM、索引复用、语义/混合检索、隔离、缓存及显式 apply、CLI 整库备份恢复、重启持久化、正文变更失效、历史保留和供应商故障回退。模型输出由测试端点控制，不代表真实模型质量验证。
+
+0.2.7 另新增 `integration/memory-time.test.ts` 的 3 项回归，验证来源时钟超前时的普通编辑、实际删除时间、恢复、导入 dry-run/缺失或显式时间字段，以及合并对源/目标时间顺序的保护。
 
 ## 0.2.6 性能实施验证（历史证据）
 

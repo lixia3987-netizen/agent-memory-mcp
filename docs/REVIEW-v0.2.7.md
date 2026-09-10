@@ -25,6 +25,12 @@
 
 [policy-output.test.ts](../tests/integration/policy-output.test.ts) 增加 4 项回归：配置限额与原子更新、标准字段限额、导入/合并回滚、有效脱敏记录的 JSON/Markdown 往返及 redact→reject 更新。修复不扫描或改写旧记录；旧版本若已写入超限字段，需显式缩小该字段后再写入或导入。
 
+**P2：来源时钟超前时，普通编辑可破坏时间顺序。**
+
+实测导入 created_at 为 2099-01-01、updated_at 为 2099-01-02 的合法记录后，仅编辑 importance，旧实现把 updated_at 写成 2026 年本机当前时间，早于创建时间。删除/恢复有同一问题，未提供时间字段的导入更新则可能因合并后倒序而失败。
+
+新增 [memory-time.ts](../src/services/memory-time.ts)，隐式更新时间取本机当前时间、创建时间和原更新时间中的较晚值，保持单调；删除时间仍使用实际事件时间。调用点涵盖普通更新、删除、恢复、合并及缺失时间的导入更新。显式提供的倒序导入时间仍拒绝，来源时间不被悄悄覆盖。[memory-time.test.ts](../tests/integration/memory-time.test.ts) 的 3 项测试覆盖这些流程、dry-run 及失败回滚。
+
 ## 功能覆盖矩阵
 
 | 预期功能 | 实际检验及关键证据 | 状态 |
@@ -32,6 +38,7 @@
 | 一期 8 工具兼容及 CRUD | 编译后 stdio 调用；更新 FTS、持久化重开、错误返回；`contract/mcp`、`integration/memory` | 通过 |
 | namespace/project 精确隔离 | ID/筛选/图谱/仓储写入防跨域；null 与 all_projects 分开；`memory`、`graph`、`review-regressions` | 通过 |
 | 搜索、中文混合短词及分页 | 词法字段命中、字面 FTS、全部过滤、稳定分页；新旧完整 SearchHit/score/snippet 对照；`search-equivalence`、`review-v023` | 通过 |
+| 时间顺序与来源时钟 | 原始时间保留、隐式更新单调、显式倒序拒绝、删除事件时间；`memory-time`、`review-v022` | 通过 |
 | TTL、软删除、恢复、显式 purge | 过期去重、搜索隐藏、恢复冲突、审计、派生统计与图谱生命周期；`memory`、`policy-maintenance`、`review-v022/v024` | 通过 |
 | JSON/Markdown 导入导出 | 原 ID/时间/metadata/删除状态往返；dry-run 回滚、skip/update/copy、来源幂等与回退；`import-export`、`review-v022/v023` | 通过 |
 | Claude Code 及适配器接口 | 目录范围、项目映射、heading key/frontmatter、版本检测及自定义注册；`import-export`、`policy-maintenance`、`unit/importers` | 通过 |
@@ -67,7 +74,7 @@
 | 合并前最新 PR HEAD | [34464719771](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34464719771)：Windows/Ubuntu/release-gate 成功 |
 | 合并后基线本地 | `pnpm check`：145/145，0 失败、0 跳过 |
 | 合并提交主分支 CI | [34467865771](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34467865771)，状态以 Actions 为准 |
-| 0.2.7 本地 | Node 24.19.0，pnpm 11.19.0，TypeScript 5.9.3；typecheck/build 通过，150/150，0 失败、0 跳过 |
+| 0.2.7 本地 | Node 24.19.0，pnpm 11.19.0，TypeScript 5.9.3；typecheck/build 通过，153/153，0 失败、0 跳过 |
 | 新增工作流 | 编译后进程、真实 stdio/HTTP、原生 CLI 备份恢复，成功 |
 | 0.2.7 主分支 CI | 提交后运行 Windows/Ubuntu 完整门禁；最终结果补录于本节 |
 

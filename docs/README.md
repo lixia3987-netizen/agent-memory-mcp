@@ -1,6 +1,6 @@
 # Agent Memory MCP 文档索引
 
-当前实现版本为 0.2.5，包含一期和二期核心能力。
+当前实现版本为 0.2.6，包含一期和二期核心能力。
 
 | 文档 | 用途 |
 | --- | --- |
@@ -9,7 +9,7 @@
 | [PHASE2_GUIDE.md](PHASE2_GUIDE.md) | 模型、图谱、时间事实、去重、维护与 HTTP 使用 |
 | [VALIDATION.md](VALIDATION.md) | 当前版本的本地验证证据 |
 | [REVIEW_FIXES-v0.2.5.md](REVIEW_FIXES-v0.2.5.md) | 合并/HTTP 生命周期与 token 保护的修复、兼容和回归 |
-| [PERFORMANCE_PLAN.md](PERFORMANCE_PLAN.md) | 高频词 FTS 的只读原型、实施顺序与验收指标 |
+| [PERFORMANCE_PLAN.md](PERFORMANCE_PLAN.md) | FTS、统计和搜索线程的实施、基准数据及边界 |
 | [REVIEW_FIXES-v0.2.4.md](REVIEW_FIXES-v0.2.4.md) | 前轮策略/统计/Unicode/Markdown 修复与回归证据 |
 | [REVIEW_FIXES-v0.2.3.md](REVIEW_FIXES-v0.2.3.md) | 前轮 8 项问题、18 个回归用例与兼容说明 |
 | [REVIEW_FIXES-v0.2.2.md](REVIEW_FIXES-v0.2.2.md) | 前轮 15 项缺陷的修复、兼容变化与回归证据 |

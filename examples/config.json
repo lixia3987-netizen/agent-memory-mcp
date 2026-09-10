@@ -7,7 +7,10 @@
     "defaultLimit": 10,
     "maxLimit": 100,
     "importanceBoost": 0.12,
-    "recencyBoost": 0.08
+    "recencyBoost": 0.08,
+    "workerEnabled": true,
+    "workerQueueLimit": 20,
+    "workerTimeoutMs": 30000
   },
   "imports": {
     "allowedRoots": [],

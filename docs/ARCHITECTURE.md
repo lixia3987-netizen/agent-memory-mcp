@@ -1087,6 +1087,9 @@ type AppConfig = {
     maxLimit: number
     importanceBoost: number // 默认 0.12，范围 0–0.2
     recencyBoost: number    // 默认 0.08，范围 0–0.1
+    workerEnabled: boolean // 0.2.6：MCP/CLI 词法查询用单个只读线程，默认 true
+    workerQueueLimit: number // 执行中 + 等待任务总上限，默认 20
+    workerTimeoutMs: number // 含排队的总期限，默认 30000ms
   }
 
   embedding?: {

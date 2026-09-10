@@ -26,8 +26,8 @@ function values(m: Memory): SQLInputValue[] {
 }
 export class SqliteMemoryRepository implements MemoryRepository {
   private db: DatabaseSync;
-  private config: AppConfig;
-  constructor(db: DatabaseSync, config: AppConfig) { this.db = db; this.config = config; }
+  private config: Pick<AppConfig, 'search'>;
+  constructor(db: DatabaseSync, config: Pick<AppConfig, 'search'>) { this.db = db; this.config = config; }
   transaction<T>(operation: SyncOperation<T>, dryRun = false): T {
     return transaction(this.db, operation, dryRun);
   }
@@ -67,8 +67,8 @@ export class SqliteMemoryRepository implements MemoryRepository {
     }
     return records;
   }
-  search(query: string, filters: Filters): SearchHit[] {
-    const now = Date.now(); const { sql, params } = memoryWhere(filters, now);
+  search(query: string, filters: Filters, now = Date.now()): SearchHit[] {
+    const { sql, params } = memoryWhere(filters, now);
     const words = query.trim().split(/\s+/u);
     const cjk = /\p{Script=Han}/u.test(query);
     // FTS5 trigram MATCH cannot match tokens shorter than three code points.
@@ -87,9 +87,20 @@ export class SqliteMemoryRepository implements MemoryRepository {
     const from = indexed ? `${table} JOIN memories m ON m.rowid=${table}.rowid` : 'memories m';
     const snippet = indexed ? `snippet(${table},-1,'[',']','…',32)` : 'substr(m.content,1,600)';
     const clauses = [...(indexed ? [`${table} MATCH ?`] : []), sql, ...shortClauses];
-    const rows = this.db.prepare(`SELECT m.*, ${snippet} AS snippet, ${score} AS score FROM ${from}
-      WHERE ${clauses.join(' AND ')} ORDER BY score DESC,m.updated_at DESC,m.id LIMIT ? OFFSET ?`)
-      .all(...(indexed ? [literalFtsQuery(indexedWords.join(' '))] : []), ...params, ...shortParams, filters.limit ?? 10, filters.offset ?? 0);
+    const match = indexed ? [literalFtsQuery(indexedWords.join(' '))] : [];
+    // Score every eligible match before selecting the page. Materialization keeps
+    // wide rows and snippet() out of the full sort, within one SQLite snapshot.
+    // CROSS JOIN fixes the outer loop to the small page, then seeks by rowid;
+    // the second MATCH supplies snippet's FTS context without reranking results.
+    const rows = this.db.prepare(`WITH ranked AS MATERIALIZED (
+        SELECT m.rowid AS rowid, ${score} AS score FROM ${from}
+        WHERE ${clauses.join(' AND ')} ORDER BY score DESC,m.updated_at DESC,m.id LIMIT ? OFFSET ?
+      )
+      SELECT m.*, ${snippet} AS snippet, ranked.score FROM ranked
+      CROSS JOIN memories m ON m.rowid=ranked.rowid
+      ${indexed ? `CROSS JOIN ${table} ON ${table}.rowid=m.rowid WHERE ${table} MATCH ?` : ''}
+      ORDER BY ranked.score DESC,m.updated_at DESC,m.id`)
+      .all(...match, ...params, ...shortParams, filters.limit ?? 10, filters.offset ?? 0, ...match);
     return rows.map(row => {
       const { content: _content, metadata: _metadata, content_hash: _hash, deleted_at: _deleted, ...memory } = decode(row);
       const rawScore = Math.max(0, Number(row.score));

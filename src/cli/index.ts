@@ -91,7 +91,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
       case 'init': case 'migrate': case 'doctor': result = app.doctor(); break;
       case 'add': result = app.memory.add({ ...scope, content: v.content, title: v.title, type: v.type, source: v.source }); break;
       case 'list': result = app.memory.list({ ...filters, ...pagination }); break;
-      case 'search': result = v.mode ? await app.hybrid.search({ ...filters,...pagination,query:v.query,mode:v.mode }) : app.memory.search({ ...filters, ...pagination, query: v.query }); break;
+      case 'search': result = v.mode ? await app.hybrid.search({ ...filters,...pagination,query:v.query,mode:v.mode }) : await app.memory.searchAsync({ ...filters, ...pagination, query: v.query }); break;
       case 'import': result = await app.imports.run({ ...scope, format: v.format, path: v.path, dry_run: !v.apply, conflict: v.conflict, backup: v.backup });
         try { app.intelligence.recordGlobalImportMetrics(v.format ?? 'unknown',result); }catch { app.log('warn','metrics.unavailable'); }break;
       case 'importers': result={ importers:app.imports.listAdapters() };break;
@@ -116,7 +116,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
         result = app.memory.purge({ ...filters, before:v.before, confirmed:v.yes }); break;
     }
     process.stdout.write(JSON.stringify(result, null, 2) + '\n');
-  } finally { app.close(); }
+  } finally { await app.close(); }
 }
 export function reportFailure(error: unknown): void {
   // CLI errors go to stderr so a failed stdio startup never corrupts stdout.

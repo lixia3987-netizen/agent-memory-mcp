@@ -1,12 +1,12 @@
-# 实现状态：0.2.5
+# 实现状态：0.2.6
 
 日期：2026-09-10。基于用户提供的一期/二期需求和架构，以及已交付的 0.1.0 继续实现。
 
 ## 本次结果
 
-二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。本轮修复独立审查确认的两个 P1 和一个 P2 问题，新增 12 项有复现依据的回归测试；Linux 本地 typecheck、build 和 136 项测试通过。本次提交的 Windows 状态见[修复分支 Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions?query=branch%3Afix%2Freview-lifecycle-v025)，不能用前版 CI 代替当前提交的验证。
+二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。本轮修复独立审查确认的两个 P1 和一个 P2 问题，新增 12 项有复现依据的回归测试；随后完成正式 FTS 两阶段查询与 4 项等价性、4 项线程边界与 1 项 schema 104 升级回归；Linux 本地 typecheck、build 和 145 项测试通过。本次提交的 Windows 状态见[修复分支 Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions?query=branch%3Afix%2Freview-lifecycle-v025)，不能用前版 CI 代替当前提交的验证。
 
-用户 Windows 10/11 实机客户端和真实供应商尚未联调；5 万条合成数据已做基准，常见词查询存在性能缺口，尚未满足正式 Release 的全部完成定义。
+用户 Windows 10/11 实机客户端和真实供应商尚未联调；本轮将 FTS 原型投入正式查询并增加规模/并发基准。目标平台结果以当前提交 CI 和 PERFORMANCE_PLAN.md 为准，尚未满足正式 Release 的全部完成定义。
 
 | 阶段 | 状态 | 实现与证据 |
 | --- | --- | --- |
@@ -23,7 +23,17 @@
 | P2-9 Importer 插件接口 | 已实现并测试 | extensions / detectVersion / parse / register；JSON、Markdown、Claude Code |
 | P2-10 Policy / Maintenance / Metrics | 已实现并测试 | 秘密规则、大小/来源/类型/TTL 等策略；维护与本地指标 |
 | P2-11 可选 HTTP | 已实现并测试 | 官方 SDK 无状态 Streamable HTTP、loopback、令牌和 Host/Origin/大小/并发限制 |
-| P2-12 Windows 回归 | **以本轮 CI 为准，用户实机待验** | CI 在当前修复分支上执行 136 项测试、doctor/init 与 smoke |
+| P2-12 Windows 回归 | **以本轮 CI 为准，用户实机待验** | CI 在当前修复分支上执行 145 项测试、doctor/init、smoke 和 5 万/10 万条 FTS 基准 |
+
+## 0.2.6 FTS 性能修订
+
+- 一条 SQL 物化选页，先对全部合格记录评分，再按 rowid 读取页面正文和摘要；不提前截断候选。
+- 外层固定从小页面开始连接，保留 FTS MATCH 上下文；英文、中文长词/混合短词及全短词均使用相同分页语义。
+- 对照冻结的 0.2.5 查询，验证完整 SearchHit、分数、摘要、稳定排序、所有过滤和更新/删除/恢复/TTL。
+- 新增 benchmarks/search.mjs 与跨平台 CI 基准，保存每次采样、执行计划及 HTTP 事件循环数据。新增 schema 105 覆盖索引，升级先备份；无新增运行依赖或必填配置。
+
+- MCP/CLI 词法查询使用单个只读工作线程，预算默认 20、总期限默认 30 秒；执行超时后旧线程未退出前不启动替代线程，关闭会排空已接受任务。同步服务接口和真正 hybrid 融合仍保留同步词法阶段。
+- schema 105 的覆盖索引避免统计反复读取正文页，保留已有统计过滤规则。
 
 ## 0.2.5 独立审查修订
 
@@ -59,7 +69,7 @@
 
 ## 数据升级
 
-保留已发布迁移 1/2/3，追加 101/102/103/104。当前 schemaVersion 为 104。升级前自动备份，事务内迁移，失败回滚并拒绝写模式。测试覆盖带真实一期 Memory 的 schema 3 升级、原字段不变、升级前 v3 备份和失败回滚。
+保留已发布迁移 1/2/3，追加 101/102/103/104/105。当前 schemaVersion 为 105。升级前自动备份，事务内迁移，失败回滚并拒绝写模式。测试覆盖带真实一期 Memory 的 schema 3 升级、原字段不变、升级前 v3 备份和失败回滚。
 
 默认配置兼容一期。新增秘密检测默认拒绝匹配的凭据，但不会扫描/改写存量记录。已经建立图谱链接的 Memory 不允许静默移动 project，需要先显式解绑。
 
@@ -68,14 +78,14 @@
 - Node.js 24.19.0 / TypeScript 5.9.3 / pnpm 11.19.0 / Linux。
 - 官方 MCP TypeScript SDK 1.30.0，未新增需原生构建的依赖。
 - pnpm typecheck、pnpm build、pnpm test 通过。
-- 136 项测试通过，0 失败、0 跳过；详见 VALIDATION.md。
+- 145 项测试通过，0 失败、0 跳过；详见 VALIDATION.md。
 - 真实 stdio/HTTP MCP 客户端和本地模拟供应商 HTTP 联调均通过。
 - 所有测试使用临时数据，不调用真实云模型，不读写用户的记忆数据。
 
 ## 明确边界
 
 1. Windows CI 以本次分支/提交结果为准；用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
-2. 已执行约 5 万条合成 Memory 基准，高命中率英文 FTS P95 约 318ms；只读 SQL 原型有改善但未投入运行路径。10 万 Memory、10 万 Entity/50 万 Relation 及目标 Windows 规模仍未验收，不能宣称达到全部 P95/RSS 目标。
+2. 旧查询 5 万条高命中率英文 FTS P95 约 318ms；0.2.6 已实施两阶段 SQL，新增 5 万/10 万 Memory 的可重现旧新对照及 HTTP 并发基准。当前结果见 PERFORMANCE_PLAN.md；10 万 Entity/50 万 Relation、真实语料和模型仍未验收，不能宣称达到全部 P95/RSS 目标。
 3. 默认向量检索是受数量与内存预算约束的本地余弦计算，不是 ANN 或 SQLite 向量扩展；结果可截断。
 4. memory_at_time 查询关系事实，未实现所有 Memory 正文的通用版本历史；合并原快照另行保存。
 5. memory_export 继续为 schemaVersion 1 的 Memory 导出。完整图谱/向量/任务/合并快照使用整个数据库 backup/restore。

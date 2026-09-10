@@ -16,11 +16,11 @@ export class HybridSearchService {
   constructor(memory: MemoryService,embeddings: EmbeddingService,graph: GraphService,repository: IntelligenceRepository) { this.memory=memory;this.embeddings=embeddings;this.graph=graph;this.repository=repository; }
   async search(input: unknown) {
     const { query,mode,graph_context,...rest }=hybridSchema.parse(input);const filters=this.memory.filters(rest);
-    if (mode==='lexical') return this.memory.search({ ...rest,query });
+    if (mode==='lexical') return this.memory.searchAsync({ ...rest,query });
     let semantic: Awaited<ReturnType<EmbeddingService['search']>>;
     try { semantic=await this.embeddings.search(query,filters); }
     catch (error) { const e=asAppError(error);if (e.code!=='PROVIDER_UNAVAILABLE') throw error;
-      return { ...this.memory.search({ ...rest,query }),requested_mode:mode,fallback:{ code:e.code,reason:e.message } };
+      return { ...await this.memory.searchAsync({ ...rest,query }),requested_mode:mode,fallback:{ code:e.code,reason:e.message } };
     }
     const lexicalPool=mode==='hybrid' ? this.memory.repository.search(query,{ ...filters,limit:101,offset:0 }) : [];
     const lexical=lexicalPool.slice(0,100);

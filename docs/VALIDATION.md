@@ -1,19 +1,23 @@
-# 本地验证记录 · 0.2.5
+# 本地验证记录 · 0.2.6
 
-日期：2026-09-10。针对独立审查 R1/R2/R3 修复；用户实际客户端、真实模型及全面规模仍有验证边界。
+日期：2026-09-10。针对独立审查 R1/R2/R3 修复及 R4 FTS 性能实施；用户实际客户端、真实模型及全面规模仍有验证边界。
 
 | 项目 | 结果 |
 | --- | --- |
 | 平台 / Node | Linux / 24.19.0 |
 | pnpm / TypeScript / MCP SDK | 11.19.0 / 5.9.3 / 1.30.0 |
 | pnpm typecheck / build | 通过 |
-| pnpm test | **136 通过 / 0 失败 / 0 跳过** |
-| 初次完整测试耗时 | 约 4.08 秒，仅代表本测试套件 |
-| schema / 依赖 / 配置 | schema 104，无新增迁移、依赖或必填配置 |
+| pnpm test | **145 通过 / 0 失败 / 0 跳过** |
+| 初次完整测试耗时 | 约 4.21 秒，仅代表本测试套件 |
+| schema / 依赖 / 配置 | schema 105，新增覆盖索引迁移；无新增依赖或必填配置 |
 | Windows | 以[本次修复分支 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions?query=branch%3Afix%2Freview-lifecycle-v025) 的当前提交为准，不沿用旧版记录 |
 | 真实云模型 / 用户客户端 | 本轮未联调 |
 
-## 新增 12 项回归
+## 本轮新增 9 项回归
+
+search-equivalence.test.ts 使用冻结的 0.2.5 查询作为对照：多语言/字面词/字段命中及摘要；全部过滤/scope/TTL；完整加权排序/分页/稳定同分；更新/软删/恢复/回滚/到期。每项包含多组输入，比较完整返回字段、score 和 snippet。原有 136 项测试继续保留。另加 4 项只读线程回归：调用时间/过滤/更新兼容、容量和关闭排空、期限与启动失败、禁用后的同步回退；1 项 schema 104 → 105 备份及原记录保留验证。
+
+## 0.2.5 新增 12 项回归
 
 integration/review-v025.test.ts：9 项。
 
@@ -38,17 +42,18 @@ contract/http-lifecycle.test.ts：3 项。
 
 最初图谱 3 项、HTTP 3 项在旧实现上失败；token 对照在补充名称前证明漏检。修复后全部通过，新增正常行为保护用例也通过。测试使用临时 SQLite 和本机 HTTP，未访问真实模型或用户数据库。
 
-## 性能实验
+## 性能验证
 
-独立审查约 5 万条合成 Memory 的高命中率英文 P95 约 318ms。随后只读 SQL 对照：当前完整查询 P95 312.02ms，物化选页后取正文/摘要原型 P95 72.88ms；两种英文查询的字段、顺序、score、snippet 一致。
+0.2.6 已替换正式查询，不再使用仅原型的 72.88ms 作为当前结果。`pnpm benchmark:search` 构建并测量正式服务，在全新临时库内生成 5 万/10 万条混合语言正文，旧新交替、3 次预热、30 次计时，每次结果与冻结旧查询比较；另用独立 HTTP 服务进程测量并发 get/stats 和事件循环延迟。
 
-这不是生产查询已提速的证据；原型仅覆盖两个英文查询、一个合成数据库，尚未替换应用 search()。计划与验收见 [PERFORMANCE_PLAN.md](PERFORMANCE_PLAN.md)。
+CI 在 Ubuntu/Windows 执行相同脚本，上传 search-benchmark-* 原始分布和执行计划。性能绝对值受共享 runner 影响，CI 以结果一致性/脚本正常完成为硬门禁；P95 目标和实际值单独报告，不能把 CI 绿灯解释为所有环境 SLA。当前实测及边界见 [PERFORMANCE_PLAN.md](PERFORMANCE_PLAN.md)。
 
 ## 验证命令
 
 ```text
 pnpm install --frozen-lockfile
 pnpm check
+pnpm benchmark:search
 ```
 
 contract 测试使用 dist，不能省略 build。当前 Windows CI 的完整测试、doctor/init、smoke 仍是平台门禁；CI 不替代 Windows 10/11 实机客户端。历史证据保存在 [VALIDATION-v0.2.4.md](VALIDATION-v0.2.4.md)。

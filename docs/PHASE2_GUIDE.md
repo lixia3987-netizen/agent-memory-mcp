@@ -12,7 +12,7 @@ node dist/index.js doctor
 node dist/index.js serve
 ```
 
-旧数据库自动升级为 schema 104；升级前生成快照。停止旧进程后再升级，不要让 0.1 和 0.2 交替操作同一数据库。保留 Node.js 24，不需要引入 Python、JDK 或 native npm 编译依赖。
+旧数据库自动升级为 schema 105；升级前生成快照。停止旧进程后再升级，不要让 0.1 和 0.2 交替操作同一数据库。保留 Node.js 24，不需要引入 Python、JDK 或 native npm 编译依赖。
 
 ## 新增工具
 
@@ -184,7 +184,7 @@ node dist/index.js maintenance --action enrichment-jobs --namespace work --proje
 node dist/index.js maintenance --action enrichment-jobs --namespace work --project demo --limit 20 --apply
 ```
 
-没有隐式常驻 worker，也没有系统级定时任务；worker 由显式维护操作执行。网络调用按 timeout/retries 限制，失败任务可重新 enqueue。进程中断后，未过期租约先等待，过期后可重新领取。
+Enrichment 没有隐式后台任务，也没有系统级定时任务；任务由显式维护操作执行。0.2.6 的只读搜索线程独立于 Enrichment，仅处理显式词法查询。网络调用按 timeout/retries 限制，失败任务可重新 enqueue。进程中断后，未过期租约先等待，过期后可重新领取。
 
 llm.maxAttempts 默认 3，允许 1–100，限制一个任务跨多轮维护的执行次数；它与单次 HTTP 请求的 retries 分开计算。批量 enrichment 遇到 retryable 故障时停止本轮：未耗尽预算则恢复 pending 并返回 deferred=1，达到上限则转 failed 并计入 failed。熔断期间的执行也消耗任务预算，避免无限 pending。不可重试错误直接 failed，正文版本冲突仍为 stale。
 

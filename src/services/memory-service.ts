@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { addSchema, mutableSchema, listSchema, searchSchema, scopeSchema, idSchema, updateSchema, purgeSchema } from '../domain/memory.ts';
 import type { Memory, Scope, Filters, ImportRecord } from '../domain/memory.ts';
 import type { MemoryRepository } from '../repositories/memory-repository.ts';
+import type { AsyncSearch } from '../repositories/async-search.ts';
 import type { AppConfig } from '../app/config.ts';
 import { contentHash } from '../shared/hash.ts';
 import { AppError } from '../shared/errors.ts';
@@ -11,7 +12,10 @@ export class MemoryService {
   readonly repository: MemoryRepository;
   readonly config: AppConfig;
   readonly policy: PolicyEngine;
-  constructor(repository: MemoryRepository, config: AppConfig) { this.repository = repository; this.config = config; this.policy=new PolicyEngine(config.policy); }
+  private asyncSearch?: AsyncSearch;
+  constructor(repository: MemoryRepository, config: AppConfig, asyncSearch?: AsyncSearch) {
+    this.repository = repository; this.config = config; this.policy=new PolicyEngine(config.policy); this.asyncSearch = asyncSearch;
+  }
   scope(input: unknown): Scope {
     const v = scopeSchema.parse(input);
     return { namespace: v.namespace ?? this.config.namespace, project: v.project === undefined ? this.config.project : v.project };
@@ -91,5 +95,11 @@ export class MemoryService {
   search(input: unknown) {
     const { query, ...filters } = searchSchema.parse(input);
     return { memories: this.repository.search(query, this.filters(filters)), query, mode: 'lexical' as const };
+  }
+  async searchAsync(input: unknown) {
+    const { query, ...filters } = searchSchema.parse(input);
+    const parsed = this.filters(filters);
+    const memories = this.asyncSearch ? await this.asyncSearch.search(query, parsed, Date.now()) : this.repository.search(query, parsed);
+    return { memories, query, mode: 'lexical' as const };
   }
 }

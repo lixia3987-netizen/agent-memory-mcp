@@ -58,4 +58,7 @@ export const phase2Migrations = [
       UPDATE relations SET deleted_at=coalesce(deleted_at,CAST(unixepoch('subsec')*1000 AS INTEGER)),updated_at=CAST(unixepoch('subsec')*1000 AS INTEGER) WHERE source_memory_id=old.id;
     END;
   ` },
+  { version: 105, name: 'covering_memory_stats', sql: `
+    CREATE INDEX idx_memory_stats ON memories(namespace,project,deleted_at,expires_at,id,content_hash);
+  ` },
 ] as const;

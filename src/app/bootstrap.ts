@@ -2,6 +2,7 @@ import type { ConfigOverrides } from './config.ts';
 import { resolveConfig } from './config.ts';
 import { openDatabase, databaseInfo, probeFts } from '../infra/sqlite/database.ts';
 import { SqliteMemoryRepository } from '../infra/sqlite/memory-repository.ts';
+import { SqliteAsyncSearch } from '../infra/sqlite/async-search.ts';
 import { MemoryService } from '../services/memory-service.ts';
 import { ImportService } from '../services/import-service.ts';
 import { ExportService } from '../services/export-service.ts';
@@ -22,7 +23,8 @@ export async function bootstrap(overrides: ConfigOverrides = {},providers: { emb
   const config = resolveConfig(overrides);
   const db = await openDatabase(config);
   const repository = new SqliteMemoryRepository(db, config);
-  const memory = new MemoryService(repository, config);
+  const search = config.search.workerEnabled ? new SqliteAsyncSearch(config) : undefined;
+  const memory = new MemoryService(repository, config, search);
   const backups = new BackupService(db, config);
   const intelligence=new SqliteIntelligenceRepository(db);
   const graphRepository=new SqliteGraphRepository(db);
@@ -45,7 +47,7 @@ export async function bootstrap(overrides: ConfigOverrides = {},providers: { emb
       return { ok: capabilities.fts5 && capabilities.trigram, node: process.version, platform: process.platform, dbPath: config.dbPath,
         writable: true, ...capabilities, ...databaseInfo(db), dbBytes: backups.size() };
     },
-    close: () => { if (!closed) { closed = true; db.close(); } },
+    close: () => { if (!closed) { closed = true; db.close(); } return search?.close() ?? Promise.resolve(); },
   };
 }
 export type Application = Awaited<ReturnType<typeof bootstrap>>;

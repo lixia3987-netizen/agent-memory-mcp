@@ -34,7 +34,7 @@ export function createMcpServer(app: Application): McpServer {
   server.registerTool('memory_add', { description: 'Add durable memory. Exact normalized duplicates in the same scope return the existing ID.', inputSchema: addSchema, annotations: { ...write, idempotentHint: true } },
     args => run('memory_add', () => app.memory.add(args, server.server.getClientVersion()?.name ?? 'mcp')));
   server.registerTool('memory_search', { description: 'Search FTS5 with literal AND terms, BM25 and small importance/recency boosts. Deleted and expired memories are excluded by default.', inputSchema: searchSchema, annotations: read },
-    args => run('memory_search', () => app.memory.search(args)));
+    args => run('memory_search', () => app.memory.searchAsync(args)));
   server.registerTool('memory_get', { description: 'Get a full memory by ID in the selected scope. Returns expired state; deleted records require include_deleted:true.', inputSchema: idSchema, annotations: read },
     args => run('memory_get', () => app.memory.get(args)));
   server.registerTool('memory_update', { description: 'Update a memory in the selected original scope. Supply changes in updates; moving projects uses updates.project.', inputSchema: updateSchema, annotations: { ...write, destructiveHint: true } },

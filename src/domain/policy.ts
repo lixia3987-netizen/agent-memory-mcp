@@ -1,10 +1,11 @@
 import type { AppConfig } from '../app/config.ts';
-import type { ImportRecord } from './memory.ts';
+import { mutableSchema, type ImportRecord } from './memory.ts';
 import { AppError } from '../shared/errors.ts';
 import { REDACTED, sensitiveName, scanCredentials } from './credentials.ts';
 
 const keyPattern = /\b(?:sk-(?:proj-|ant-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})\b/g;
 const privateKey = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?(?:-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|$)/g;
+const redactedFieldsSchema = mutableSchema.pick({ content:true, title:true, metadata:true });
 export class PolicyEngine {
   private config: AppConfig['policy']; private custom: RegExp[];
   constructor(config: AppConfig['policy']) {
@@ -51,6 +52,10 @@ export class PolicyEngine {
         const { content,title,metadata,...other }=v; this.checkSecrets(JSON.stringify(other));
         v.content=this.redact(content); if (typeof title==='string') v.title=this.redact(title);
         if (metadata) v.metadata=this.clean(metadata) as Record<string,unknown>;
+        // Replacements can be longer than the secret. Enforce storage/round-trip
+        // limits on the transformed record as well as on the original input.
+        if (Buffer.byteLength(v.content)>cfg.maxContentBytes) throw new AppError('VALIDATION_ERROR','Redacted content exceeds the configured policy size limit.');
+        redactedFieldsSchema.parse({ content:v.content,title:v.title,metadata:v.metadata });
       }
     }
     return v;

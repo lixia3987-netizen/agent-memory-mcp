@@ -2,11 +2,13 @@
 
 基于 Node.js 24、TypeScript、官方 MCP TypeScript SDK 和 SQLite 的本地长期记忆服务。
 
-**当前版本：0.2.1，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。Windows CI 结果以 [GitHub Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions) 为准；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
+**当前版本：0.2.2，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。Windows CI 结果以 [GitHub Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions) 为准；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
 
 核心运行不需要 Docker、WSL、虚拟机、外部数据库、Python、JDK、VC++ 构建工具或 API Key。默认使用 stdio，不监听端口，不发送遥测。Embedding/LLM 默认关闭；只有显式启用后，相应操作才会把输入发送到所配置的服务。本地 HTTP 也需要显式配置并启用。
 
-0.2.1 是二期代码审查修订版：强化仓储 scope 校验、同步事务契约和诊断，修复熔断计数，统一配置与版本来源。逐项结论见 [REVIEW_FIXES-v0.2.1.md](docs/REVIEW_FIXES-v0.2.1.md)。从 0.2.0 升级不新增数据库迁移，schema 仍为 v104；新增配置均有默认值。
+0.2.2 修复凭据漏检、过期去重、导入默认值与时间戳、关系更新冲突、任务重试及配置/文件读取边界。新增 21 项回归测试，本地全量 94 项通过。逐项说明见 [REVIEW_FIXES-v0.2.2.md](docs/REVIEW_FIXES-v0.2.2.md)。从 0.2.1 升级不新增迁移，schema 保持 104。
+
+0.2.1 是前一轮代码审查修订版：强化仓储 scope 校验、同步事务契约和诊断，修复熔断计数，统一配置与版本来源。逐项结论见 [REVIEW_FIXES-v0.2.1.md](docs/REVIEW_FIXES-v0.2.1.md)。从 0.2.0 升级不新增数据库迁移，schema 仍为 v104；新增配置均有默认值。
 
 从 0.1.0 升级：先停止旧 memory 进程，保留原数据目录，用新源码安装、构建并运行 `doctor`。首次启动自动备份并将 schema v3 升级至 v104，原 Memory 保留。旧版本会拒绝新版 schema；回退需使用升级前备份恢复到新路径。二期默认配置可直接启动，不要求先填模型信息。
 
@@ -121,7 +123,7 @@ Claude Code、Cursor 等客户端支持本地 stdio MCP。Codex、Hermes 或其�
 
 FTS 使用 BM25，并对重要度和新近程度作小幅乘法加权，只有全文匹配的记录能参与排序。query 中空白分隔的词采用字面量 AND 查询，不开放原始 FTS 运算符。常规检索用 unicode61；含中文且每个查询片段至少三个字符时使用 trigram，支持正文中的中文短语子串。一个或两个汉字的任意子串搜索不保证命中；一期没有完整中文分词。score 仅用于同次查询排序，不应视为跨查询的概率。
 
-软删除与过期记录默认从列表、搜索、导出排除。get 可以读取过期记录并标记状态。去重将 NFC Unicode 和连续空白标准化，仅用于 hash，原始正文保持原样；已删除记录不阻止重新添加。过期但未删除的重复记录仍返回原 ID，如需延期请显式更新 TTL。
+软删除与过期记录默认从列表、搜索、导出排除。get 可以读取过期记录并标记状态。去重将 NFC Unicode 和连续空白标准化，仅用于 hash，原始正文保持原样；已删除或已过期记录不阻止重新添加；过期记录保留原 ID，新添加的活跃记录使用新 ID。若要延续原记录，请显式更新其 TTL。
 
 ## 导入与导出
 
@@ -151,7 +153,7 @@ Claude importer 仅扫描 memory 目录中的 Markdown，忽略无关项目文�
 | 策略 | 行为 |
 | --- | --- |
 | `skip`（默认） | 已导入同一文件版本、相同来源项、相同 ID 或标准化正文冲突时跳过 |
-| `update` | 文件内容变化后更新对应记录，保留 ID；导入的时间和 metadata 存在时按输入保存 |
+| `update` | 文件内容变化后更新对应记录，保留 ID；导入的时间和 metadata 存在时按输入保存；缺失的 TTL/importance 保留旧值 |
 | `copy` | 冲突时创建新 ID，metadata 记录 copiedFromId；相同文件版本再次执行仍跳过 |
 
 文件路径、分段 key、文件 hash 和目标作用域共同记录导入来源。不同作用域已占用的 ID 不会被覆盖；可用 copy 显式重新分配。被手动删除的记录不会因为原文件再次导入而自动复活。内容发生变化后用 update 导入普通 Markdown，仍保留原删除状态；JSON 可以显式传 deleted_at。
@@ -178,7 +180,7 @@ node dist/index.js purge --namespace work --project demo --before "2026-09-01T00
 
 数据库恢复先验证源文件和 schema，再为可读取的当前数据库创建备份，然后生成并验证新数据库。若当前库已损坏，CLI 跳过正常启动和当前库快照，返回 `current_backup: null`，原 DB/WAL/SHM 保留用于后续排查。完成后停止各 MCP 客户端的 memory 进程，将 `AGENT_MEMORY_DB` 改为恢复结果的路径，再重新启动。**不支持直接覆盖正在使用的 SQLite/WAL 文件。**
 
-SQLite 使用 WAL、foreign_keys、busy_timeout 和短事务。迁移在 BEGIN IMMEDIATE 锁内重读版本；有历史 schema 的迁移前自动备份，失败回滚并终止启动。FTS 索引由触发器维护，删除/恢复操作留有不含正文的审计事件。DATABASE_BUSY 可稍后重试；发现损坏请从备份恢复到新路径。
+SQLite 使用 WAL、foreign_keys、busy_timeout 和短事务。迁移在 BEGIN IMMEDIATE 锁内重读版本；升级前在写事务之外自动备份，再次加锁后用同一连接的 data_version 校验期间是否有并发提交。数据变化时重新备份，连续 3 次变化则返回可重试 DATABASE_BUSY；实际迁移全程同步执行，失败回滚并终止启动。FTS 索引由触发器维护，删除/恢复操作留有不含正文的审计事件。DATABASE_BUSY 可稍后重试；发现损坏请从备份恢复到新路径。
 
 ## 配置
 
@@ -195,7 +197,7 @@ SQLite 使用 WAL、foreign_keys、busy_timeout 和短事务。迁移在 BEGIN I
 
 完整配置示例见 [examples/config.json](examples/config.json)。相对路径相对于进程工作目录解析；客户端配置建议使用绝对路径。`--no-project` 将默认项目显式设为 null。
 
-默认不会扫描任何目录。每次导入都必须给出路径或内联数据；配置 `imports.allowedRoots` 后，文件导入仅允许这些目录。记忆正文默认不写日志。二期增加基于规则的秘密信息检测，默认拒绝匹配的凭据，也可配置正文/metadata 脱敏；这不是完整 DLP，调用方仍应避免写入秘密。Provider Key 通过环境变量读取，不存数据库。
+默认不会扫描任何目录。每次导入都必须给出路径或内联数据；配置 `imports.allowedRoots` 后，文件导入仅允许这些目录。imports 段未知字段、空白 homeDir/dbPath/config 路径会明确报错；读取配置的权限或 IO 错误与 JSON 语法错误分开报告。记忆正文默认不写日志。二期增加基于规则的秘密信息检测，默认拒绝匹配的凭据，也可配置正文/metadata 脱敏；这不是完整 DLP，调用方仍应避免写入秘密。Provider Key 通过环境变量读取，不存数据库。
 
 ## 开发与验证
 

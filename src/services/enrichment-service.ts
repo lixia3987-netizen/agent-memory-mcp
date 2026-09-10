@@ -46,7 +46,8 @@ export class EnrichmentService {
         return { enabled:true,status:'completed',enrichment:value,cached:false };
       });
     } catch (error) {
-      const e=asAppError(error);this.repository.finishJob(job.id,job.lease_token!,e.code==='CONFLICT' ? 'stale' : 'failed',e.code);
+      const e=asAppError(error);
+      this.repository.finishJob(job.id,job.lease_token!,e.code==='CONFLICT' ? 'stale' : e.retryable ? 'pending' : 'failed',e.code);
       throw e;
     }
   }
@@ -72,12 +73,18 @@ export class EnrichmentService {
     });
   }
   async work(scope: Scope,limit: number) {
-    if (!this.provider) return { enabled:false,completed:0,failed:0 };
-    let completed=0,failed=0;
+    if (!this.provider) return { enabled:false,completed:0,failed:0,deferred:0 };
+    let completed=0,failed=0,deferred=0;
     for (let i=0;i<limit;i++) {
       const job=this.repository.claimJob(scope,this.leaseMs());if (!job) break;
-      try { await this.execute(job,scope);completed++; }catch { failed++; }
+      try { await this.execute(job,scope);completed++; }
+      catch (error) {
+        // Provider retries already ran. Leave this job queued and stop the batch;
+        // another explicit maintenance pass can retry without cycling the queue.
+        if (asAppError(error).retryable) { deferred++;break; }
+        failed++;
+      }
     }
-    return { enabled:true,completed,failed };
+    return { enabled:true,completed,failed,deferred };
   }
 }

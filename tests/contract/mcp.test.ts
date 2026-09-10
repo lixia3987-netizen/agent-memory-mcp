@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { temporary } from '../helpers.ts';
+import { cleanup, temporary } from '../helpers.ts';
 
 test('built stdio server preserves v1 tools and invokes all 27 tools through the official MCP client', { timeout: 30000 }, async t => {
   const home = temporary(t);
@@ -12,7 +12,7 @@ test('built stdio server preserves v1 tools and invokes all 27 tools through the
   let logs = ''; transport.stderr?.on('data', data => { logs += String(data); });
   const client = new Client({ name: 'contract-client', version: '1.0.0' });
   await client.connect(transport);
-  t.after(() => client.close());
+  cleanup(t, () => client.close());
   const tools = await client.listTools(); assert.equal(tools.tools.length, 27);
   for (const name of ['memory_add', 'memory_delete', 'memory_export', 'memory_get', 'memory_import', 'memory_list', 'memory_search', 'memory_update']) assert.ok(tools.tools.some(tool=>tool.name===name));
   const call = async (name: string, args: Record<string, unknown>) => {

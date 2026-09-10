@@ -1,6 +1,6 @@
-# 本地验证记录 · 0.2.2
+# 本地验证记录 · 0.2.1
 
-验证日期：2026-09-10。正式发布验证尚未完成。
+验证日期：2026-09-08。正式发布验证尚未完成。
 
 | 项目 | 结果 |
 | --- | --- |
@@ -11,9 +11,9 @@
 | MCP SDK | 1.30.0 |
 | pnpm typecheck | 通过 |
 | pnpm build | 通过 |
-| pnpm test | **94 通过 / 0 失败 / 0 跳过** |
-| 最终全套测试耗时 | 约 3.72 秒，仅代表此测试套件 |
-| Windows | 本次 CI 待核对；上次运行因测试清理错误失败，已修复清理顺序 |
+| pnpm test | **73 通过 / 0 失败 / 0 跳过** |
+| 最终全套测试耗时 | 约 7.69 秒，仅代表此测试套件 |
+| Windows | 尚未执行，提供 CI 矩阵 |
 | 真实云模型 | 尚未联调；HTTP 合约使用本地模拟服务验证 |
 
 ## 测试文件与覆盖
@@ -33,14 +33,12 @@
 | integration/policy-maintenance.test.ts | 写入策略、秘密拒绝/脱敏、维护预览/提交、派生链接失效、purge 不复活事实、Importer 注册与版本 |
 | integration/providers.test.ts | 真实本地 HTTP 请求、向量索引重排、Key 不落库、重试/超时/熔断、LLM JSON 校验；4xx/取消不触发熔断、并发响应维度一致性 |
 | integration/review-regressions.test.ts | 仓储跨域拒绝、markApplied 活动/版本约束、导入 ID 冲突及来源移动、service purge 守卫、跨仓储嵌套事务和异步契约、真实 FTS 探测、独立预算、统计范围及配置校验 |
-| integration/review-v022.test.ts | 凭据标点/短值/容器、TTL 到期与边界、导入合并/默认值/回滚、关系重检/历史/别名、enrichment 临时与永久故障 |
-| integration/io-review-v022.test.ts | imports 拼写、所有路径来源、配置 IO 分类、读取增长上限、迁移无写锁备份/并发提交重拍/双连接迁移竞争 |
 | unit/domain.test.ts | 类型/大小/时间/规范化/排序/配置优先级/安全错误映射 |
 | unit/importers.test.ts | Markdown frontmatter、代码围栏、分段稳定、Claude 来源、非法输入 |
 
-本次相对 0.2.1 新增 21 项测试。最终执行 pnpm check（typecheck → build → test），94 通过、0 失败、0 跳过；测试耗时 3718.917001ms，不代表大库性能。迁移测试通过在真实 SQLite 备份前后暂停、写入和另一个连接升级，验证重拍及同步迁移；文件读取测试在首次 fstat 后扩文件并确认实际读取不超过 maxBytes+1。
+额外验证：使用 `examples/config.phase2.json` 启动构建后的 doctor，writable/fts5/trigram 均为 true，schema 104、SQLite 3.53.3、integrity=ok、WAL；未启用模型调用。
 
-上次 Windows CI 的真实失败原因见 [运行 34206062929](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34206062929)：临时目录清理早于数据库关闭，导致 EPERM，后续挂起至超时。本次所有测试资源按注册逆序关闭，失败时仍尝试其余清理；测试上限 60 秒、矩阵 job 上限 15 分钟。仍需核对本次远端 Windows 结果。
+本次相对 0.2.0 新增 15 项测试。针对性测试后执行了一次完整 typecheck/build/test，73 通过、0 失败、0 跳过，耗时 7690.890589ms。后续仅更新验证文档和打包，未改源码。
 
 运行命令：
 

@@ -69,7 +69,8 @@ export class ImportService {
           const segments = path.dirname(file.path).split(path.sep); const i = segments.lastIndexOf('memory');
           if (i > 0) scope.project = segments[i - 1]!;
         }
-        const record = importRecordSchema.parse(this.memory.policy.apply({ ...item.record, ...scope }));
+        // Keep absent fields absent until we know whether this is a create or update.
+        const record = importRecordSchema.parse(this.memory.policy.apply({ ...item.record, ...scope },false));
         if (record.created_at && record.updated_at && record.updated_at < record.created_at) throw new AppError('VALIDATION_ERROR', 'Imported updated_at precedes created_at.');
         parsed.push({ ...item, record });
         if (parsed.length > this.memory.config.imports.maxRecords) throw new AppError('VALIDATION_ERROR', 'Import contains too many records.');
@@ -102,6 +103,7 @@ export class ImportService {
           created_at: record.created_at ?? existing.created_at, updated_at: record.updated_at ?? new Date().toISOString(),
           content_hash: contentHash(scope.namespace, scope.project, record.content) },false);
         next.content_hash=contentHash(scope.namespace,scope.project,next.content);
+        if (Date.parse(next.updated_at)<Date.parse(next.created_at)) throw new AppError('VALIDATION_ERROR','Imported updated_at cannot precede created_at.');
         if (!next.deleted_at && repo.duplicate(next.content_hash, scope, next.id)) throw new AppError('CONFLICT', 'Imported update duplicates a different memory.');
         repo.replace(next); repo.audit(next, 'import_update'); repo.recordImport({ ...origin, memory_id: next.id }); stats.updated++;
       } else {

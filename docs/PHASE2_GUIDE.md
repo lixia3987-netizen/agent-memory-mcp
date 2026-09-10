@@ -1,4 +1,4 @@
-# 二期使用指南 · 0.2.1
+# 二期使用指南 · 0.2.2
 
 ## 直接开始使用
 
@@ -88,7 +88,7 @@ node dist/index.js serve
 {"namespace":"work","project":"demo","at":"2026-08-01T00:00:00+08:00"}
 ```
 
-当前 relation_search 默认排除已删除、inactive 及正文来源过时的事实。memory_at_time 默认保留与旧正文版本关联的事实，避免修改原记忆后历史消失；可显式 include_stale=false 收紧。graph_neighbors/graph_path 指定 at 时同样按历史事实遍历。`memory_at_time` 返回的是**关系事实**，不是所有 Memory 正文的历史版本。
+未传 at 时，relation_search/graph_neighbors/graph_path 默认排除来源已过时的事实。显式传 at 时，这三个接口与 memory_at_time 一样默认保留关联旧正文版本的历史事实；均可显式 include_stale=false 收紧，或 include_stale=true 保留。deleted/inactive 筛选及区间边界独立生效。`memory_at_time` 返回的是**关系事实**，不是所有 Memory 正文的历史版本。
 
 冲突策略：
 
@@ -96,7 +96,9 @@ node dist/index.js serve
 - `supersede`：必须显式提供一个旧 relation ID，事务化替代。其他重叠替代项仍作为冲突保留。
 - `parallel`：明确允许同一时间并存，例如项目同时使用多项技术。
 
-实体唯一性依据 scope + type + 标准化名称，aliases 用于查找。实体重复添加时返回原记录；要追加别名请用 entity_update。关系绑定 source_memory_id 时必须同 scope，系统记录该次正文 hash。普通 Memory 更新会让旧派生事实从“当前事实”中隐藏，但不删除历史。
+修改关系 valid_to/status 或恢复已删除关系时，会重新标记当前未封存事实之间的重叠冲突。已 superseded 的历史记录不再作为新冲突的修改目标；已有冲突标记与降置信度保留，不自动推断如何消解。parallel 关系仅编辑普通属性时维持并存，修改有效期或状态时仍重新检查重叠。
+
+实体唯一性依据 scope + type + 标准化名称，aliases 用于查找。别名同样按 NFKC、大小写和空白规范化去重，保留首次拼写与输入顺序，返回数组与落库一致。实体重复添加时返回原记录；要追加别名请用 entity_update。关系绑定 source_memory_id 时必须同 scope，系统记录该次正文 hash。普通 Memory 更新会让旧派生事实从“当前事实”中隐藏，但不删除历史。
 
 实体/关系删除使用 updates.deleted=true，恢复用 false。有关联的 Memory 不能直接搬到另一个 project：先用 entity_link unlink=true 解除链接，并通过 relation_update updates.source_memory_id=null 明确移除来源绑定。`enriched` 是自动抽取链接的保留 role，正文变化后这些链接失效。
 
@@ -178,11 +180,15 @@ node dist/index.js maintenance --action enrichment-jobs --namespace work --proje
 
 没有隐式常驻 worker，也没有系统级定时任务；worker 由显式维护操作执行。网络调用按 timeout/retries 限制，失败任务可重新 enqueue。进程中断后，未过期租约先等待，过期后可重新领取。
 
+批量 enrichment 遇到 retryable 故障时，将当前任务恢复 pending、停止本轮，返回 deferred=1；下次执行 maintenance enrichment-jobs --apply 可继续。不可重试错误仍为 failed，正文版本冲突仍为 stale。旧版已标 failed 的任务不自动猜测错误是否瞬时，可显式 enrich --action enqueue 或 run 重入队。
+
 ## 策略、Importer、维护与可观测性
+
+导入新增记录时应用默认 TTL/importance；导入更新时，来源未提供这些字段就保留现值，显式 expires_at=null 表示永不过期。合并后的 updated_at 不得早于 created_at。
 
 policy 支持 rejectTypes/rejectSources/rejectNamespaces、minimumImportance、maxContentBytes、defaultTtlDays、typeDefaults、duplicateThreshold 和秘密检测。默认保留一期 importance=5 与无 TTL 的语义，不自动提高 decision 的重要度；示例可自行配置。
 
-secretDetection 默认为 true、secretAction 为 reject。redact 模式针对 Memory 正文/标题/metadata 脱敏；图谱属性及 LLM 输出中匹配的秘密仍拒绝。规则检测不能保证识别全部秘密。自定义 regex 是本机可信配置，应使用简单、有界模式。策略覆盖新增、更新和导入；不会批量改写历史数据库。
+secretDetection 默认为 true、secretAction 为 reject。凭据检测不再要求值至少 8 字符，支持标点和引号内空格。redact 模式针对 Memory 正文/标题/metadata 脱敏；metadata 的敏感键直接隐藏整个值（包括短字符串、数字和容器）；图谱属性及 LLM 输出中匹配的秘密仍拒绝。规则检测不能保证识别全部秘密。自定义 regex 是本机可信配置，应使用简单、有界模式。策略覆盖新增、更新和导入；不会批量改写历史数据库。
 
 ```powershell
 node dist/index.js importers

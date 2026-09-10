@@ -37,8 +37,8 @@ export class SqliteMemoryRepository implements MemoryRepository {
   }
   hasGlobalIdCollision(id: string): boolean { return !!this.db.prepare('SELECT 1 FROM memories WHERE id=?').get(id); }
   duplicate(hash: string, scope: Scope, excludingId = ''): Memory | null {
-    const row = this.db.prepare('SELECT * FROM memories WHERE content_hash=? AND namespace=? AND project IS ? AND id<>? AND deleted_at IS NULL ORDER BY created_at,id LIMIT 1')
-      .get(hash, scope.namespace, scope.project, excludingId);
+    const row = this.db.prepare('SELECT * FROM memories WHERE content_hash=? AND namespace=? AND project IS ? AND id<>? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at>?) ORDER BY created_at,id LIMIT 1')
+      .get(hash, scope.namespace, scope.project, excludingId, Date.now());
     return row ? decode(row) : null;
   }
   insert(m: Memory): void { this.db.prepare('INSERT INTO memories(id,namespace,project,type,title,content,tags_json,tags_text,source,importance,content_hash,metadata_json,created_at,updated_at,expires_at,deleted_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(...values(m)); }

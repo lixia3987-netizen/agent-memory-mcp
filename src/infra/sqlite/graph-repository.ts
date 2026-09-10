@@ -12,7 +12,7 @@ const iso = (v: unknown): string => new Date(Number(v)).toISOString();
 const nullableIso = (v: unknown): string | null => v === null ? null : iso(v);
 const millis = (v: string | null): number | null => v === null ? null : Date.parse(v);
 const json = (v: unknown): Record<string, unknown> | null => v === null ? null : JSON.parse(String(v)) as Record<string, unknown>;
-const entitySelect = `SELECT e.*,coalesce((SELECT json_group_array(alias) FROM entity_aliases a WHERE a.entity_id=e.id),'[]') AS aliases_json FROM entities e`;
+const entitySelect = `SELECT e.*,coalesce((SELECT json_group_array(alias) FROM (SELECT alias FROM entity_aliases a WHERE a.entity_id=e.id ORDER BY a.rowid)),'[]') AS aliases_json FROM entities e`;
 function entity(row: Row): Entity {
   return { id: String(row.id), namespace: String(row.namespace), project: row.project === null ? null : String(row.project),
     type: String(row.type), name: String(row.name), canonical_name: String(row.canonical_name), attributes: json(row.attributes_json),
@@ -81,7 +81,7 @@ export class SqliteGraphRepository implements GraphRepository {
   }
   conflicts(r: Relation): Relation[] {
     return this.db.prepare(`SELECT * FROM relations WHERE namespace=? AND project IS ? AND source_entity_id=? AND predicate=? AND target_entity_id<>? AND id<>?
-      AND deleted_at IS NULL AND status<>'inactive' AND (valid_to IS NULL OR valid_to>?) AND (? IS NULL OR valid_from<?) LIMIT 1001`)
+      AND deleted_at IS NULL AND status IN('active','conflict') AND superseded_by IS NULL AND (valid_to IS NULL OR valid_to>?) AND (? IS NULL OR valid_from<?) LIMIT 1001`)
       .all(r.namespace,r.project,r.source_entity_id,r.predicate,r.target_entity_id,r.id,millis(r.valid_from),millis(r.valid_to),millis(r.valid_to)).map(relation);
   }
   edges(ids: string[], scope: Scope, at: string, direction: 'in' | 'out' | 'both', limit: number,includeStale=false): Relation[] {

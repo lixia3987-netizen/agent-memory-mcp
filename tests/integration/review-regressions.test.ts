@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { application } from '../helpers.ts';
+import { cleanup, application } from '../helpers.ts';
 import { TestEmbedding, TestLlm } from '../fixtures/providers.ts';
 import { SqliteGraphRepository } from '../../src/infra/sqlite/graph-repository.ts';
 import { SqliteMemoryRepository } from '../../src/infra/sqlite/memory-repository.ts';
@@ -17,7 +17,7 @@ test('repository link/unlink/merge reject foreign endpoints and wrong scopes bef
   const targetEntity=app.graph.entityAdd({name:'local target entity'}).entity;
   app.graph.link({memory_id:source.id,entity_id:entity.id,role:'manual'});
   const fact=app.graph.relationAdd({source_entity_id:entity.id,target_entity_id:targetEntity.id,predicate:'USES',source_memory_id:source.id}).relation;
-  const db=new DatabaseSync(app.config.dbPath);t.after(()=>db.close());
+  const db=new DatabaseSync(app.config.dbPath);cleanup(t, ()=>db.close());
   const repo=new SqliteGraphRepository(db);
   const snapshot=()=>({links:db.prepare('SELECT * FROM memory_entities ORDER BY memory_id,entity_id,role').all(),relations:db.prepare('SELECT * FROM relations ORDER BY id').all()});
   for (const otherScope of [{namespace:'test',project:'other'},{namespace:'other',project:null}]) {
@@ -99,7 +99,7 @@ test('service purge requires confirmation and only removes deleted memories in t
 });
 
 test('shared-connection nested transactions roll back independently across repository instances',async t=>{
-  const app=await application(t);const db=new DatabaseSync(app.config.dbPath);t.after(()=>db.close());
+  const app=await application(t);const db=new DatabaseSync(app.config.dbPath);cleanup(t, ()=>db.close());
   const first=new SqliteMemoryRepository(db,app.config);const second=new SqliteMemoryRepository(db,app.config);
   const a=new MemoryService(first,app.config);const b=new MemoryService(second,app.config);
   first.transaction(()=>{
@@ -128,7 +128,7 @@ test('transactions reject async callbacks before execution and roll back returne
 });
 
 test('FTS capability probes exercise tokenizers, report missing support and leave no temporary tables',t=>{
-  const db=new DatabaseSync(':memory:');t.after(()=>db.close());
+  const db=new DatabaseSync(':memory:');cleanup(t, ()=>db.close());
   assert.deepEqual(probeFts(db),{fts5:true,trigram:true});
   assert.equal(db.prepare('SELECT count(*) n FROM sqlite_temp_master').get()!.n,0);
   const mocked=t.mock.method(db,'exec',()=>{throw new Error('no such module: fts5');});

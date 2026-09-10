@@ -81,7 +81,7 @@ export class GraphService {
   relationSearch(input: unknown) {
     const v = relationSearchSchema.parse(input); const scope = this.memory.scope({ namespace:v.namespace,project:v.project });
     const at = v.at ?? new Date().toISOString();
-    return { at,relations:this.repository.relations({ ...v,...scope,at }).map(r => ({ ...r,active:r.deleted_at === null && r.status !== 'inactive' && r.valid_from <= at && (r.valid_to === null || r.valid_to > at) })) };
+    return { at,relations:this.repository.relations({ ...v,...scope,at,include_stale:v.include_stale ?? (v.at!==undefined) }).map(r => ({ ...r,active:r.deleted_at === null && r.status !== 'inactive' && r.valid_from <= at && (r.valid_to === null || r.valid_to > at) })) };
   }
   atTime(input: unknown) { return this.relationSearch({ ...atTimeSchema.parse(input),history:false }); }
   relationUpdate(input: unknown): Relation {
@@ -98,7 +98,14 @@ export class GraphService {
       }
       if (next.valid_to !== null && next.valid_to <= next.valid_from) throw new AppError('VALIDATION_ERROR','valid_to must follow valid_from.');
       if (!next.deleted_at) { this.entityGet({ ...scope,id:next.source_entity_id }); this.entityGet({ ...scope,id:next.target_entity_id }); }
-      this.memory.policy.checkSecrets(JSON.stringify(next)); this.repository.saveRelation(next,false); return next;
+      this.memory.policy.checkSecrets(JSON.stringify(next));
+      if (!next.deleted_at && next.status!=='inactive' && !next.superseded_by &&
+        ('valid_to' in updates || 'status' in updates || deleted===false || old.status==='conflict')) {
+        const conflicts=this.repository.conflicts(next);
+        if (conflicts.length>1000) throw new AppError('CONFLICT','Too many overlapping facts. Resolve existing conflicts first.');
+        for (const conflict of conflicts) this.markConflict(conflict,next,next.updated_at);
+      }
+      this.repository.saveRelation(next,false); return next;
     });
   }
   link(input: unknown) {
@@ -129,7 +136,7 @@ export class GraphService {
     const maxNodes = v.max_nodes ?? limits.maxNodes; const nodes = new Map([[root.id,root]]); const edges = new Map<string,Relation>();
     let frontier = [root.id]; let truncated = false; const at = v.at ?? new Date().toISOString();
     for (let depth=0; depth<v.max_depth && frontier.length; depth++) {
-      const found = this.repository.edges(frontier,scope,at,v.direction,limits.maxEdges+1,v.at!==undefined);
+      const found = this.repository.edges(frontier,scope,at,v.direction,limits.maxEdges+1,v.include_stale ?? (v.at!==undefined));
       if (found.length > limits.maxEdges) truncated=true;
       const next: string[] = [];
       for (const edge of found) {

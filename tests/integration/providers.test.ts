@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { application } from '../helpers.ts';
+import { cleanup, application } from '../helpers.ts';
 import { providerServer } from '../fixtures/http-provider.ts';
 import { ProviderHttpClient } from '../../src/infra/providers/http-client.ts';
 import { OpenAICompatibleEmbeddingProvider } from '../../src/infra/providers/openai-compatible.ts';
@@ -9,7 +9,7 @@ import { resolveConfig } from '../../src/app/config.ts';
 
 test('real HTTP embedding adapter sends configured requests and handles reordered vector indexes',async t=>{
   const endpoint=await providerServer(t,(_route,body)=>({body:{data:(body.input as string[]).map((_text,index)=>({index,embedding:index===0 ? [1,0] : [0,1]})).reverse()}}));
-  const old=process.env.MEMORY_TEST_KEY;process.env.MEMORY_TEST_KEY='test-auth-value-not-persisted';t.after(()=>{if(old===undefined)delete process.env.MEMORY_TEST_KEY;else process.env.MEMORY_TEST_KEY=old;});
+  const old=process.env.MEMORY_TEST_KEY;process.env.MEMORY_TEST_KEY='test-auth-value-not-persisted';cleanup(t, ()=>{if(old===undefined)delete process.env.MEMORY_TEST_KEY;else process.env.MEMORY_TEST_KEY=old;});
   const app=await application(t,{embedding:{enabled:true,baseUrl:endpoint.baseUrl,model:'embed-test',apiKeyEnv:'MEMORY_TEST_KEY',retries:0}});
   app.memory.add({content:'alpha'});app.memory.add({content:'beta'});
   assert.equal((await app.embeddings.rebuild({})).indexed,2);assert.equal(endpoint.requests[0]?.route,'/v1/embeddings');

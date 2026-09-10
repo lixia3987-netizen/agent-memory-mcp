@@ -1,3 +1,4 @@
+import { cleanup } from '../helpers.ts';
 import { createServer } from 'node:http';
 import type { TestContext } from 'node:test';
 
@@ -12,7 +13,7 @@ export async function providerServer(t:TestContext,handler:(route:string,body:Re
     res.writeHead(result.status ?? 200,{'Content-Type':'application/json'});res.end(JSON.stringify(result.body));
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
-  t.after(async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));});
+  cleanup(t, async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));});
   const address=server.address();if (!address || typeof address==='string') throw new Error('No address');
   return {baseUrl:`http://127.0.0.1:${address.port}/v1`,requests};
 }

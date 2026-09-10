@@ -1,57 +1,61 @@
-# 本地验证记录 · 0.2.4
+# 本地验证记录 · 0.2.6
 
-验证日期：2026-09-10。正式发布验证尚未完成。
+日期：2026-09-10。针对独立审查 R1/R2/R3 修复及 R4 FTS 性能实施；用户实际客户端、真实模型及全面规模仍有验证边界。
 
 | 项目 | 结果 |
 | --- | --- |
-| 平台 | Linux |
-| Node.js | 24.19.0 |
-| pnpm | 11.19.0 |
-| TypeScript | 5.9.3 |
-| MCP SDK | 1.30.0 |
-| pnpm typecheck | 通过 |
-| pnpm build | 通过 |
-| pnpm test | **124 通过 / 0 失败 / 0 跳过** |
-| 最终全套测试耗时 | 约 3.93 秒，仅代表此测试套件 |
-| Windows | [代码 21cb926 的 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34456011313)：124 通过 / 0 失败 / 0 跳过；doctor/init 与 smoke 通过 |
-| 远端汇总 | Ubuntu、Windows、release-gate 均 success |
-| 真实云模型 | 尚未联调；HTTP 合约使用本地模拟服务验证 |
+| 平台 / Node | Linux / 24.19.0 |
+| pnpm / TypeScript / MCP SDK | 11.19.0 / 5.9.3 / 1.30.0 |
+| pnpm typecheck / build | 通过 |
+| pnpm test | **145 通过 / 0 失败 / 0 跳过** |
+| 初次完整测试耗时 | 约 4.21 秒，仅代表本测试套件 |
+| schema / 依赖 / 配置 | schema 105，新增覆盖索引迁移；无新增依赖或必填配置 |
+| Windows / Ubuntu CI | [代码提交 9c19cb8](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34463321642)：各 145/145 测试、doctor/init、smoke、5 万/10 万条基准和 release-gate 均通过 |
+| 真实云模型 / 用户客户端 | 本轮未联调 |
 
-## 测试文件与覆盖
+## 本轮新增 9 项回归
 
-| 文件 | 覆盖重点 |
-| --- | --- |
-| contract/mcp.test.ts | 真实构建产物 stdio 握手、全部 27 个工具、一期调用语义、业务错误、不泄露正文日志 |
-| contract/http.test.ts | HTTP 显式启用、禁止远程绑定、令牌、Host/Origin、大小限制及真实 SDK 调用；接收期限之后的长工具调用仍能完成 |
-| integration/database.test.ts | 迁移前备份、未知 schema、迁移回滚、备份恢复、不覆盖现有数据 |
-| integration/phase2-upgrade.test.ts | 带一期存量数据的 v3→v104 迁移及 v3 备份；持久任务重启恢复 |
-| integration/concurrency.test.ts | 四进程并发启动/读写，避免去重竞争 |
-| integration/memory.test.ts | CRUD、持久化、scope、TTL、软删除、恢复、purge、FTS、中文、事务回滚 |
-| integration/import-export.test.ts | JSON/Markdown 往返、dry-run、冲突策略、Claude 项目隔离、目录/大小/符号链接限制 |
-| integration/cli.test.ts | 构建后 CLI、输出保护、purge 守卫、导出大小、损坏数据库恢复 |
-| integration/graph.test.ts | 实体别名/去重/恢复、范围、时间边界、未来替代、历史来源变化、冲突、遍历、路径、失效事实 |
-| integration/intelligence.test.ts | 禁用降级、语义匹配、筛选、向量 CAS/失效/批校验/游标、RRF 图补充、合并校验、LLM apply、失败与租约 |
-| integration/policy-maintenance.test.ts | 写入策略、秘密拒绝/脱敏、维护预览/提交、派生链接失效、purge 不复活事实、Importer 注册与版本 |
-| integration/providers.test.ts | 真实本地 HTTP 请求、向量索引重排、Key 不落库、重试/超时/熔断、LLM JSON 校验；4xx/取消不触发熔断、并发响应维度一致性 |
-| integration/review-regressions.test.ts | 仓储跨域拒绝、markApplied 活动/版本约束、导入 ID 冲突及来源移动、service purge 守卫、跨仓储嵌套事务和异步契约、真实 FTS 探测、独立预算、统计范围及配置校验 |
-| integration/review-v024.test.ts | redact→reject 的 update/import/merge、占位符边界、自定义规则、裸值/引号/转义组合/大整数 JSON、派生统计软删/恢复/TTL/作用域、100 行保留与 ID 缺口、emoji 阈值、空 frontmatter 与正文分隔符 |
-| integration/review-v023.test.ts | 失效事实、parallel 更新、新重叠、来源刷新/LLM apply、任务次数/租约/作用域、真实 HTTP 429/500 与熔断、导入回退/软删/恢复、JSON 脱敏、450 条冲突引用和 1000 引用上限、混合中文查询 |
-| integration/review-v022.test.ts | 凭据标点/短值/容器、TTL 到期与边界、导入合并/默认值/回滚、关系重检/历史/别名、enrichment 临时与永久故障 |
-| integration/io-review-v022.test.ts | imports 拼写、所有路径来源、配置 IO 分类、读取增长上限、迁移无写锁备份/并发提交重拍/双连接迁移竞争 |
-| unit/domain.test.ts | 类型/大小/时间/规范化/排序/配置优先级/安全错误映射 |
-| unit/importers.test.ts | Markdown frontmatter、代码围栏、分段稳定、Claude 来源、非法输入 |
+search-equivalence.test.ts 使用冻结的 0.2.5 查询作为对照：多语言/字面词/字段命中及摘要；全部过滤/scope/TTL；完整加权排序/分页/稳定同分；更新/软删/恢复/回滚/到期。每项包含多组输入，比较完整返回字段、score 和 snippet。原有 136 项测试继续保留。另加 4 项只读线程回归：调用时间/过滤/更新兼容、容量和关闭排空、期限与启动失败、禁用后的同步回退；1 项 schema 104 → 105 备份及原记录保留验证。
 
-本次相对 0.2.3 新增 12 项测试。最初 11 项在未修复代码上全部失败，修复后通过；额外加入 24 组引号/转义组合，校验 JSON 可解析、无秘密残留、重复脱敏及 reject 兼容，另校验敏感 JSON 容器/数字/布尔值。空 frontmatter 额外覆盖正文中的后续分隔线，避免跳过首个关闭标记。
+## 0.2.5 新增 12 项回归
 
-最终执行 pnpm check（typecheck → build → test），124 通过、0 失败、0 跳过；测试耗时 3927.337027ms，只代表测试套件。已核对 [代码 21cb926 的 CI 日志](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34456011313)：Ubuntu 与 Windows 均 124 通过、0 失败、0 跳过，测试耗时分别约 7.92 秒和 13.88 秒；doctor/init 的 schemaVersion 为 104、integrity 为 ok，smoke 与 release-gate 通过。后续仅提交验证文档，源代码与测试不变。Windows 测试资源逆序关闭、测试上限 60 秒、矩阵 job 上限 15 分钟继续保留。
+integration/review-v025.test.ts：9 项。
 
-运行命令：
+- 合并前修改来源和目标正文：旧事实持续失效、正常事实迁移、原来源/版本/时间戳保留。
+- 自定义正文不认证旧事实，历史 at 查询保留原证据。
+- 已结束、inactive、删除关系与删除端点不刷新证据。
+- future supersede 保持区间及替代关系。
+- 策略脱敏改写正文时不刷新旧事实 hash。
+- token 在正文/JSON/嵌套 metadata 及 update/import/merge 被拒绝。
+- redact 保留 JSON 并隐藏嵌套 token。
+- 完整 token 占位符在 redact→reject 后可更新，真实后缀仍拒绝。
+- 普通 token 术语和 token_count/tokenizer 不误伤。
+
+contract/http-lifecycle.test.ts：3 项。
+
+- 分别在并发 1 和默认 20 下执行成功/失败/成功三轮真实 HTTP 取消；运行中仍限流，任务结束后 stats 恢复 200，无效 JSON 后容量正常。
+- 停服等待已断开的工具结束，确认向量入库后才返回；重复 close 安全。
+
+仓储 scope 回归继续执行，并增加来源 hash 不匹配时拒绝迁移的断言。原 124 项测试全部保留：真实 stdio 的 27 工具、HTTP SDK、迁移回滚、备份恢复、多进程 WAL、TTL/删除/范围、文件往返、Provider 超时/熔断/租约等。
+
+## 复现依据
+
+最初图谱 3 项、HTTP 3 项在旧实现上失败；token 对照在补充名称前证明漏检。修复后全部通过，新增正常行为保护用例也通过。测试使用临时 SQLite 和本机 HTTP，未访问真实模型或用户数据库。
+
+## 性能验证
+
+0.2.6 已替换正式查询，不再使用仅原型的 72.88ms 作为当前结果。`pnpm benchmark:search` 构建并测量正式服务，在全新临时库内生成 5 万/10 万条混合语言正文，旧新交替、3 次预热、30 次计时，每次结果与冻结旧查询比较；另用独立 HTTP 服务进程测量并发 get/stats 和事件循环延迟。
+
+CI 在 Ubuntu/Windows 执行相同脚本，上传 search-benchmark-* 原始分布和执行计划。性能绝对值受共享 runner 影响，CI 以结果一致性/脚本正常完成为硬门禁；P95 目标和实际值单独报告，不能把 CI 绿灯解释为所有环境 SLA。5 万条英文 FTS P95：Ubuntu 76.39ms、Windows 78.41ms，均达到 ≤150ms 建议目标；Windows 10 万条并发 stats 为 105.19ms，略超新增 ≤100ms 目标。完整实测及边界见 [PERFORMANCE_PLAN.md](PERFORMANCE_PLAN.md)。
+
+## 验证命令
 
 ```text
 pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm build
-pnpm test
+pnpm check
+pnpm benchmark:search
 ```
 
-未验证：用户 Windows 10/11 实机环境与实际客户端、大型数据库 P95/RSS、长时并发压力、真实供应商模型质量。Windows CI 通过不代表这些验证已完成。
+contract 测试使用 dist，不能省略 build。当前 Windows CI 的完整测试、doctor/init、smoke 仍是平台门禁；CI 不替代 Windows 10/11 实机客户端。历史证据保存在 [VALIDATION-v0.2.4.md](VALIDATION-v0.2.4.md)。
+
+代码验证对应 9c19cb8；后续提交仅补文档和性能证据，未改源代码/配置/测试/基准脚本。

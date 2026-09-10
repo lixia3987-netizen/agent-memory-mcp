@@ -1,5 +1,5 @@
 export const REDACTED = '[REDACTED]';
-const names = '(?:password|passwd|api[_-]?key|access[_-]?token|secret|authorization)';
+const names = '(?:password|passwd|api[_-]?key|access[_-]?token|token|secret|authorization)';
 export const sensitiveName = new RegExp(`^${names}$`, 'i');
 const boundary = /[\s,;}\]]/u;
 

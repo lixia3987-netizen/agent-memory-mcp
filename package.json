@@ -1,6 +1,6 @@
 {
   "name": "agent-memory-mcp",
-  "version": "0.2.4",
+  "version": "0.2.6",
   "private": true,
   "description": "Local-first memory MCP server for Node.js 24 and Windows",
   "type": "module",
@@ -24,7 +24,8 @@
     "test:smoke": "node --test --test-timeout=60000 tests/contract/mcp.test.ts",
     "start": "node dist/index.js",
     "dev": "node src/index.ts",
-    "check": "pnpm typecheck && pnpm build && pnpm test"
+    "check": "pnpm typecheck && pnpm build && pnpm test",
+    "benchmark:search": "pnpm build && node benchmarks/search.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

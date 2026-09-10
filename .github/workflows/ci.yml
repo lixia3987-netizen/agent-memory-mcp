@@ -27,6 +27,15 @@ jobs:
       - run: node dist/index.js doctor --home ./test-results/doctor
       - run: node dist/index.js init --home ./test-results/init
       - run: pnpm test:smoke
+      - name: Search equivalence and 50k/100k latency benchmark
+        run: node benchmarks/search.mjs test-results/search-benchmark.json
+      - name: Keep raw benchmark distributions and query plans
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: search-benchmark-${{ matrix.os }}
+          path: test-results/search-benchmark.json
+          if-no-files-found: warn
   release-gate:
     if: always()
     needs: validate

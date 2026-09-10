@@ -13,6 +13,8 @@ const configSchema = z.object({
   busyTimeoutMs: z.number().int().min(1).max(60000).default(5000),
   search: z.object({ defaultLimit: z.number().int().min(1).max(100).default(10), maxLimit: z.number().int().min(1).max(100).default(100),
     importanceBoost: z.number().min(0).max(0.2).default(0.12), recencyBoost: z.number().min(0).max(0.1).default(0.08),
+    workerEnabled: z.boolean().default(true), workerQueueLimit: z.number().int().min(1).max(100).default(20),
+    workerTimeoutMs: z.number().int().min(1).max(120000).default(30000),
   }).strict().prefault({}),
   imports: z.object({ allowedRoots: z.array(configPath).default([]), maxFileBytes: z.number().int().positive().max(52428800).default(10485760),
     maxFiles: z.number().int().min(1).max(10000).default(1000), maxRecords: z.number().int().min(1).max(100000).default(10000),

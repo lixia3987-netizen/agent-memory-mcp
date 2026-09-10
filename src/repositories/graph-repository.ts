@@ -13,7 +13,8 @@ export interface GraphRepository {
   edges(ids: string[], scope: Scope, at: string, direction: 'in' | 'out' | 'both', limit: number, includeStale?:boolean): Relation[];
   link(memoryId: string, entityId: string, scope: Scope, role: string, confidence: number, unlink?: boolean): void;
   links(entityIds: string[], filters: Filters, limit: number): string[];
-  mergeLinks(targetId: string, sourceId: string, contentHash: string, scope: Scope): void;
+  // null sourceHash transfers entity links only; rewritten content cannot certify old facts.
+  mergeLinks(targetId: string, sourceId: string, contentHash: string, scope: Scope, sourceHash: string | null): void;
   stats(scope: Scope): Record<string, number>;
   consistency(scope: Scope): { invalid_relations: number; invalid_links: number };
   orphanEntities(scope: Scope, limit: number): Entity[];

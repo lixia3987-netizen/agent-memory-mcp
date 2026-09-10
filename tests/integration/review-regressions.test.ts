@@ -27,13 +27,14 @@ test('repository link/unlink/merge reject foreign endpoints and wrong scopes bef
     assert.throws(()=>repo.link(local.id,foreignEntity.id,scope,'manual',1),/scope/);
     assert.throws(()=>repo.link(foreign.id,entity.id,scope,'manual',1),/scope/);
     assert.throws(()=>repo.link(source.id,entity.id,otherScope,'manual',1,true),/scope/);
-    assert.throws(()=>repo.mergeLinks(local.id,foreign.id,local.content_hash,scope),/scope/);
-    assert.throws(()=>repo.mergeLinks(local.id,source.id,local.content_hash,otherScope),/scope/);
+    assert.throws(()=>repo.mergeLinks(local.id,foreign.id,local.content_hash,scope,foreign.content_hash),/scope/);
+    assert.throws(()=>repo.mergeLinks(local.id,source.id,local.content_hash,otherScope,source.content_hash),/scope/);
     assert.deepEqual(snapshot(),before);
   }
-  assert.throws(()=>repo.mergeLinks(local.id,source.id,'stale-hash',scope),/version/);
+  assert.throws(()=>repo.mergeLinks(local.id,source.id,'stale-hash',scope,source.content_hash),/version/);
+  assert.throws(()=>repo.mergeLinks(local.id,source.id,local.content_hash,scope,'stale-source-hash'),/version/);
   app.memory.delete({id:source.id});
-  repo.mergeLinks(local.id,source.id,local.content_hash,scope);
+  repo.mergeLinks(local.id,source.id,local.content_hash,scope,source.content_hash);
   assert.equal(db.prepare('SELECT source_memory_id FROM relations WHERE id=?').get(fact.id)!.source_memory_id,local.id);
   assert.ok(repo.links([entity.id],app.memory.filters({}),100).includes(local.id));
   repo.link(local.id,entity.id,scope,'manual',1,true);

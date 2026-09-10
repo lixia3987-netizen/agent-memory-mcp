@@ -25,4 +25,4 @@
 - 不物理清除软删/过期记忆的派生数据；统计口径收紧，恢复后当前有效行可重新使用。embedding 数量是所有模型的有效存储行数。
 - Unicode 三元组按码点计算，不代表字素簇或中文分词；含非 BMP 字符的候选分数可能改变，不自动合并或删除记忆。
 - 指标保留上限在下一次写入导入指标时落实，不修改记忆来源或正文。
-- 新增 12 项回归测试；最初 11 项在修复前全部失败。全量 typecheck/build/test 通过：124 通过、0 失败、0 跳过。跨平台 CI 见 [VALIDATION.md](VALIDATION.md)。
+- 新增 12 项回归测试；最初 11 项在修复前全部失败。全量 typecheck/build/test 通过：124 通过、0 失败、0 跳过。[代码 21cb926 的 Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34456011313) 均通过，详见 [VALIDATION.md](VALIDATION.md)。

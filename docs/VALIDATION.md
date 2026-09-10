@@ -13,8 +13,8 @@
 | pnpm build | 通过 |
 | pnpm test | **124 通过 / 0 失败 / 0 跳过** |
 | 最终全套测试耗时 | 约 3.93 秒，仅代表此测试套件 |
-| Windows | 本次 CI 待验证；0.2.3 证据已归档 |
-| 远端汇总 | 本次 CI 待验证 |
+| Windows | [代码 21cb926 的 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34456011313)：124 通过 / 0 失败 / 0 跳过；doctor/init 与 smoke 通过 |
+| 远端汇总 | Ubuntu、Windows、release-gate 均 success |
 | 真实云模型 | 尚未联调；HTTP 合约使用本地模拟服务验证 |
 
 ## 测试文件与覆盖
@@ -43,7 +43,7 @@
 
 本次相对 0.2.3 新增 12 项测试。最初 11 项在未修复代码上全部失败，修复后通过；额外加入 24 组引号/转义组合，校验 JSON 可解析、无秘密残留、重复脱敏及 reject 兼容，另校验敏感 JSON 容器/数字/布尔值。空 frontmatter 额外覆盖正文中的后续分隔线，避免跳过首个关闭标记。
 
-最终执行 pnpm check（typecheck → build → test），124 通过、0 失败、0 跳过；测试耗时 3927.337027ms，只代表测试套件。本次远端 CI 待验证。Windows 测试资源逆序关闭、测试上限 60 秒、矩阵 job 上限 15 分钟继续保留。
+最终执行 pnpm check（typecheck → build → test），124 通过、0 失败、0 跳过；测试耗时 3927.337027ms，只代表测试套件。已核对 [代码 21cb926 的 CI 日志](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34456011313)：Ubuntu 与 Windows 均 124 通过、0 失败、0 跳过，测试耗时分别约 7.92 秒和 13.88 秒；doctor/init 的 schemaVersion 为 104、integrity 为 ok，smoke 与 release-gate 通过。后续仅提交验证文档，源代码与测试不变。Windows 测试资源逆序关闭、测试上限 60 秒、矩阵 job 上限 15 分钟继续保留。
 
 运行命令：
 

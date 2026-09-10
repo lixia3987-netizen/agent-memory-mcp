@@ -2,9 +2,11 @@
 
 基于 Node.js 24、TypeScript、官方 MCP TypeScript SDK 和 SQLite 的本地长期记忆服务。
 
-**当前版本：0.2.7，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。PR #1 已合并；合并后重新对照需求检视代码，并补上启用模型的 MCP → HTTP Provider → SQLite → 整库恢复端到端验证。当前本地类型检查、构建和 153 项测试通过；主分支 CI 结果见 [完整复验报告](docs/REVIEW-v0.2.7.md)。用户实际 Windows 客户端和真实模型仍需联调，不视为已完成正式 Release 验收。
+**当前版本：0.2.7，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。PR #1 已合并；合并后重新对照需求检视代码，并补上启用模型的 MCP → HTTP Provider → SQLite → 整库恢复端到端验证。当前本地类型检查、构建和 153 项测试通过；[代码 2bdb5ee 的 Windows/Ubuntu CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34469688900) 各 153/153 通过，规模基准与 release-gate 也已通过；完整覆盖和结果见 [复验报告](docs/REVIEW-v0.2.7.md)。用户实际 Windows 客户端和真实模型仍需联调，不视为已完成正式 Release 验收。
 
 0.2.7 修复脱敏替换后越过大小限制的问题：正文仍须满足配置限制和 64 KiB 上限，标题不超过 512 字符，metadata 不超过 16 KiB。超过限制时明确拒绝并回滚，不截断内容；无新配置、依赖或迁移，schema 仍为 105。
+
+本次 Windows 50k 英文 FTS P95 为 159.98ms、100k 并发 stats 为 122.80ms，仍超过相应 150/100ms 建议值；性能目标尚未全部达成。
 
 导入来源的时钟若快于本机，后续更新、删除、恢复和未显式提供更新时间的导入更新会保持时间单调，不把 updated_at 写到 created_at 或上次更新时间之前；deleted_at 仍记录实际删除时间，来源显式提供的倒序时间仍被拒绝。
 

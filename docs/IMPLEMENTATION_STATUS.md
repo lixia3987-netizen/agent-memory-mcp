@@ -6,13 +6,11 @@
 
 PR #1 已合并到 main（55c0cb3）。合并后的基线 145 项测试通过；本次按原始需求重新检视实现，修复脱敏后越过正文/标题/metadata 大小上限的问题，新增 4 项策略回归、3 项时间回归和 1 项启用模型的完整 MCP 工作流，当前本地 153/153 测试通过。完整覆盖矩阵、主分支 CI 结果和可用性结论见 [REVIEW-v0.2.7.md](REVIEW-v0.2.7.md)。0.2.7 不新增依赖、配置或迁移，schema 仍为 105。
 
-下列 0.2.6 性能记录及表格保留其原验证提交和测试计数；本次最新结果以复验报告为准。
-
 同时修复未来来源时钟下的时间倒退：普通更新、删除、恢复和缺失时间字段的导入更新保持 updated_at 不早于创建时间及上次更新时间；显式倒序来源时间继续拒绝。
 
-二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。本轮修复独立审查确认的两个 P1 和一个 P2 问题，新增 12 项有复现依据的回归测试；随后完成正式 FTS 两阶段查询与 4 项等价性、4 项线程边界与 1 项 schema 104 升级回归；Linux 本地 typecheck、build 和 145 项测试通过。代码提交 9c19cb8 的 [Windows/Ubuntu CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34463321642) 均为 145/145，规模基准及 release-gate 也通过；后续仅补报告及原始证据。
+代码 `2bdb5ee` 的 [Windows/Ubuntu 主分支 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34469688900) 各 153/153 测试通过，doctor/init、smoke、50k/100k 基准及 release-gate 全部成功。Windows runner 为 Server 2025，用户 Windows 10/11 实机客户端和真实供应商仍待联调。当前可本地使用/小规模试运行，正式 Release 的全部验收仍未完成。
 
-用户 Windows 10/11 实机客户端和真实供应商尚未联调；本轮将 FTS 原型投入正式查询并增加规模/并发基准。目标平台结果以当前提交 CI 和 PERFORMANCE_PLAN.md 为准，尚未满足正式 Release 的全部完成定义。
+本轮 Windows 50k 英文 FTS P95 159.98ms、100k 并发 stats P95 122.80ms，超过相应 150/100ms 建议值；完整对照见复验报告。后续 0.2.6/0.2.5 小节保留历史实施记录。
 
 | 阶段 | 状态 | 实现与证据 |
 | --- | --- | --- |
@@ -29,7 +27,7 @@ PR #1 已合并到 main（55c0cb3）。合并后的基线 145 项测试通过；
 | P2-9 Importer 插件接口 | 已实现并测试 | extensions / detectVersion / parse / register；JSON、Markdown、Claude Code |
 | P2-10 Policy / Maintenance / Metrics | 已实现并测试 | 秘密规则、大小/来源/类型/TTL 等策略；维护与本地指标 |
 | P2-11 可选 HTTP | 已实现并测试 | 官方 SDK 无状态 Streamable HTTP、loopback、令牌和 Host/Origin/大小/并发限制 |
-| P2-12 Windows 回归 | **本轮 CI 通过，用户实机待验** | CI 在当前修复分支上执行 145 项测试、doctor/init、smoke 和 5 万/10 万条 FTS 基准 |
+| P2-12 Windows 回归 | **本轮 CI 通过，用户实机待验** | main 代码 2bdb5ee 执行 153 项测试、doctor/init、smoke 和 5 万/10 万条基准，全部成功 |
 
 ## 0.2.6 FTS 性能修订
 
@@ -84,14 +82,14 @@ PR #1 已合并到 main（55c0cb3）。合并后的基线 145 项测试通过；
 - Node.js 24.19.0 / TypeScript 5.9.3 / pnpm 11.19.0 / Linux。
 - 官方 MCP TypeScript SDK 1.30.0，未新增需原生构建的依赖。
 - pnpm typecheck、pnpm build、pnpm test 通过。
-- 145 项测试通过，0 失败、0 跳过；详见 VALIDATION.md。
+- 153 项测试通过，0 失败、0 跳过；详见 VALIDATION.md。
 - 真实 stdio/HTTP MCP 客户端和本地模拟供应商 HTTP 联调均通过。
 - 所有测试使用临时数据，不调用真实云模型，不读写用户的记忆数据。
 
 ## 明确边界
 
 1. Windows CI 以本次分支/提交结果为准；用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
-2. 旧查询 5 万条高命中率英文 FTS P95 约 318ms；0.2.6 已实施两阶段 SQL，新增 5 万/10 万 Memory 的可重现旧新对照及 HTTP 并发基准。本轮 5 万条英文 FTS P95 Ubuntu 76.39ms / Windows 78.41ms；Windows 10 万条并发 stats 105.19ms 略超建议目标，详见 PERFORMANCE_PLAN.md；10 万 Entity/50 万 Relation、真实语料和模型仍未验收，不能宣称达到全部 P95/RSS 目标。
+2. 旧查询 5 万条高命中率英文 FTS P95 约 318ms；0.2.6 已实施两阶段 SQL，新增 5 万/10 万 Memory 的可重现旧新对照及 HTTP 并发基准。最新复验 5 万条英文 FTS P95 Ubuntu 77.66ms / Windows 159.98ms，Windows 超过 150ms 建议值；Windows 10 万条并发 stats 122.80ms 也超建议目标，详见 PERFORMANCE_PLAN.md；10 万 Entity/50 万 Relation、真实语料和模型仍未验收，不能宣称达到全部 P95/RSS 目标。
 3. 默认向量检索是受数量与内存预算约束的本地余弦计算，不是 ANN 或 SQLite 向量扩展；结果可截断。
 4. memory_at_time 查询关系事实，未实现所有 Memory 正文的通用版本历史；合并原快照另行保存。
 5. memory_export 继续为 schemaVersion 1 的 Memory 导出。完整图谱/向量/任务/合并快照使用整个数据库 backup/restore。

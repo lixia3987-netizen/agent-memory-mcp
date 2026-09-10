@@ -1,0 +1,311 @@
+{
+  "schemaVersion": 1,
+  "version": "0.2.7",
+  "verifiedSourceCommit": "2bdb5ee5eb99e342d443211a9520b56d27931afa",
+  "verifiedSourceTree": "3109ab2801d40341ad7a4c3fe4df020938fd5b3e",
+  "mergeCommit": "55c0cb38d1dab41c4f8bf470ce07b62a605a1dac",
+  "workflow": {
+    "id": 34469688900,
+    "url": "https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34469688900",
+    "conclusion": "success",
+    "event": "push"
+  },
+  "local": {
+    "platform": "Linux",
+    "node": "v24.19.0",
+    "command": "pnpm check",
+    "tests": 153,
+    "passed": 153,
+    "failed": 0,
+    "skipped": 0,
+    "testDurationMs": 6593.51063
+  },
+  "platforms": [
+    {
+      "platform": "Ubuntu",
+      "jobId": 102846425297,
+      "url": "https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34469688900/job/102846425297",
+      "conclusion": "success",
+      "node": "v24.20.0",
+      "tests": {
+        "tests": 153,
+        "pass": 153,
+        "fail": 0,
+        "skipped": 0,
+        "duration_ms": 12531.987463
+      },
+      "benchmarkLogSummaries": [
+        {
+          "newP95Ms": 77.65671499999735,
+          "oldP95Ms": 397.37459500000114,
+          "query": "SQLite",
+          "records": 50000
+        },
+        {
+          "newP95Ms": 0.8888779999979306,
+          "oldP95Ms": 0.9225300000034622,
+          "query": "topic0042",
+          "records": 50000
+        },
+        {
+          "newP95Ms": 77.40894300000218,
+          "oldP95Ms": 74.21670699999959,
+          "query": "长期记忆",
+          "records": 50000
+        },
+        {
+          "newP95Ms": 91.21408800000063,
+          "oldP95Ms": 88.44023400000151,
+          "query": "AI 大模型",
+          "records": 50000
+        },
+        {
+          "newP95Ms": 80.21869100000185,
+          "oldP95Ms": 137.0077769999989,
+          "query": "AI 模型",
+          "records": 50000
+        },
+        {
+          "records": 50000,
+          "statsNewP95Ms": 37.38057999999728,
+          "statsOldPlanP95Ms": 345.32761200000095
+        },
+        {
+          "eventLoopP95Ms": 401.866751,
+          "getP95Ms": 401.2186059999949,
+          "http": "legacy",
+          "records": 50000,
+          "searchP95Ms": 402.71307500000694,
+          "statsP95Ms": 439.6479030000046
+        },
+        {
+          "eventLoopP95Ms": 40.140799,
+          "getP95Ms": 4.621146000004956,
+          "http": "optimized",
+          "records": 50000,
+          "searchP95Ms": 88.81673199999204,
+          "statsP95Ms": 42.41668800001207
+        },
+        {
+          "newP95Ms": 152.67491800000425,
+          "oldP95Ms": 803.6964120000193,
+          "query": "SQLite",
+          "records": 100000
+        },
+        {
+          "newP95Ms": 0.8926260000152979,
+          "oldP95Ms": 1.4410590000043157,
+          "query": "topic0042",
+          "records": 100000
+        },
+        {
+          "newP95Ms": 145.94835600000806,
+          "oldP95Ms": 139.63700599997537,
+          "query": "长期记忆",
+          "records": 100000
+        },
+        {
+          "newP95Ms": 176.370270000014,
+          "oldP95Ms": 169.96839599998202,
+          "query": "AI 大模型",
+          "records": 100000
+        },
+        {
+          "newP95Ms": 161.2497399999993,
+          "oldP95Ms": 268.8766239999968,
+          "query": "AI 模型",
+          "records": 100000
+        },
+        {
+          "records": 100000,
+          "statsNewP95Ms": 71.18569600000046,
+          "statsOldPlanP95Ms": 734.500033999997
+        },
+        {
+          "eventLoopP95Ms": 784.334847,
+          "getP95Ms": 784.5100150000071,
+          "http": "legacy",
+          "records": 100000,
+          "searchP95Ms": 785.307284999988,
+          "statsP95Ms": 856.4712
+        },
+        {
+          "eventLoopP95Ms": 76.677119,
+          "getP95Ms": 4.27063100002124,
+          "http": "optimized",
+          "records": 100000,
+          "searchP95Ms": 163.26999699999578,
+          "statsP95Ms": 82.65132699999958
+        }
+      ]
+    },
+    {
+      "platform": "Windows Server 2025",
+      "jobId": 102846424987,
+      "url": "https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34469688900/job/102846424987",
+      "conclusion": "success",
+      "node": "v24.20.0",
+      "tests": {
+        "tests": 153,
+        "pass": 153,
+        "fail": 0,
+        "skipped": 0,
+        "duration_ms": 20393.1031
+      },
+      "benchmarkLogSummaries": [
+        {
+          "newP95Ms": 159.98059999999532,
+          "oldP95Ms": 688.4090999999898,
+          "query": "SQLite",
+          "records": 50000
+        },
+        {
+          "newP95Ms": 0.9402999999874737,
+          "oldP95Ms": 1.1762999999918975,
+          "query": "topic0042",
+          "records": 50000
+        },
+        {
+          "newP95Ms": 98.8701000000001,
+          "oldP95Ms": 96.3295999999973,
+          "query": "长期记忆",
+          "records": 50000
+        },
+        {
+          "newP95Ms": 110.91099999999278,
+          "oldP95Ms": 114.77979999998934,
+          "query": "AI 大模型",
+          "records": 50000
+        },
+        {
+          "newP95Ms": 105.91139999998268,
+          "oldP95Ms": 167.74100000000908,
+          "query": "AI 模型",
+          "records": 50000
+        },
+        {
+          "records": 50000,
+          "statsNewP95Ms": 38.00160000001779,
+          "statsOldPlanP95Ms": 995.8918999999878
+        },
+        {
+          "eventLoopP95Ms": 420.741119,
+          "getP95Ms": 424.50339999998687,
+          "http": "legacy",
+          "records": 50000,
+          "searchP95Ms": 429.92679999998654,
+          "statsP95Ms": 465.00759999998263
+        },
+        {
+          "eventLoopP95Ms": 53.641215,
+          "getP95Ms": 17.354100000025937,
+          "http": "optimized",
+          "records": 50000,
+          "searchP95Ms": 123.28689999997732,
+          "statsP95Ms": 64.74689999999828
+        },
+        {
+          "newP95Ms": 197.37430000002496,
+          "oldP95Ms": 829.4457999999868,
+          "query": "SQLite",
+          "records": 100000
+        },
+        {
+          "newP95Ms": 1.2007999999914318,
+          "oldP95Ms": 1.4760000000242144,
+          "query": "topic0042",
+          "records": 100000
+        },
+        {
+          "newP95Ms": 182.61650000000373,
+          "oldP95Ms": 185.83399999997346,
+          "query": "长期记忆",
+          "records": 100000
+        },
+        {
+          "newP95Ms": 231.84890000004089,
+          "oldP95Ms": 232.54489999997895,
+          "query": "AI 大模型",
+          "records": 100000
+        },
+        {
+          "newP95Ms": 232.05859999998938,
+          "oldP95Ms": 368.156399999978,
+          "query": "AI 模型",
+          "records": 100000
+        },
+        {
+          "records": 100000,
+          "statsNewP95Ms": 87.51879999996163,
+          "statsOldPlanP95Ms": 2721.278099999996
+        },
+        {
+          "eventLoopP95Ms": 851.443711,
+          "getP95Ms": 861.0721999999369,
+          "http": "legacy",
+          "records": 100000,
+          "searchP95Ms": 863.8708000000333,
+          "statsP95Ms": 942.121899999911
+        },
+        {
+          "eventLoopP95Ms": 102.760447,
+          "getP95Ms": 17.604999999981374,
+          "http": "optimized",
+          "records": 100000,
+          "searchP95Ms": 227.13790000008885,
+          "statsP95Ms": 122.79709999996703
+        }
+      ]
+    }
+  ],
+  "releaseGate": {
+    "id": 102849423995,
+    "conclusion": "success"
+  },
+  "artifacts": [
+    {
+      "archive_download_url": "https://api.github.com/repos/lixia3987-netizen/agent-memory-mcp/actions/artifacts/10149339420/zip",
+      "created_at": "2026-09-10T11:18:43Z",
+      "digest": "sha256:b8a28543b8857b109db3d6a237c301fe91674bb09e1ce8133feefbe478372f9e",
+      "expired": false,
+      "expires_at": "2026-12-09T11:08:07Z",
+      "id": 10149339420,
+      "name": "search-benchmark-windows-latest",
+      "size_in_bytes": 11247,
+      "updated_at": "2026-09-10T11:18:43Z",
+      "url": "https://api.github.com/repos/lixia3987-netizen/agent-memory-mcp/actions/artifacts/10149339420",
+      "workflow_run": {
+        "head_branch": "main",
+        "head_repository_id": 1361125588,
+        "head_sha": "2bdb5ee5eb99e342d443211a9520b56d27931afa",
+        "id": 34469688900,
+        "repository_id": 1361125588
+      }
+    },
+    {
+      "archive_download_url": "https://api.github.com/repos/lixia3987-netizen/agent-memory-mcp/actions/artifacts/10149139352/zip",
+      "created_at": "2026-09-10T11:12:57Z",
+      "digest": "sha256:e16efd6b0c335c2f2d90ff3c94689940c806400c606513649613bbbff37739b0",
+      "expired": false,
+      "expires_at": "2026-12-09T11:08:07Z",
+      "id": 10149139352,
+      "name": "search-benchmark-ubuntu-latest",
+      "size_in_bytes": 12162,
+      "updated_at": "2026-09-10T11:12:57Z",
+      "url": "https://api.github.com/repos/lixia3987-netizen/agent-memory-mcp/actions/artifacts/10149139352",
+      "workflow_run": {
+        "head_branch": "main",
+        "head_repository_id": 1361125588,
+        "head_sha": "2bdb5ee5eb99e342d443211a9520b56d27931afa",
+        "id": 34469688900,
+        "repository_id": 1361125588
+      }
+    }
+  ],
+  "notes": [
+    "Benchmarks run deterministic 50,000/100,000-memory corpora, 3 warmups and 30 measured samples per variant, with complete result equivalence assertions. See benchmarks/search.mjs.",
+    "This JSON preserves summaries parsed from CI logs. The listed Actions artifacts hold per-sample distributions and query plans; their expiry dates and digests are listed.",
+    "Performance thresholds are reported, not enforced as CI pass/fail. Latest Windows 50k English FTS P95=159.9806ms exceeds the suggested 150ms; 100k concurrent stats P95=122.7971ms exceeds the suggested 100ms.",
+    "Real provider quality, user Windows 10/11 desktop clients and 100k-entity/500k-relation scale remain unverified."
+  ]
+}

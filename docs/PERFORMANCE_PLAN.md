@@ -84,3 +84,13 @@ pnpm benchmark:search
 1. 先在用户真实 Windows 设备和数据上复测 10 万条 stats；若持续超过响应目标，优先将只读统计纳入独立的有界执行器，并评估与搜索共用队列的等待，或对派生表为空做短路计数。不要为一次 runner 波动引入无版本缓存。
 2. 单独分析真实 hybrid 的向量候选、图谱遍历和同步词法融合阶段，建立带过滤/版本失效的结果对照后再移出主线程；不把本次 memory_search 指标当作 hybrid 指标。
 3. 增加真实语料、长正文、多读多写和图谱规模的负载矩阵，再决定是否需要额外索引/增量聚合。当前仍使用 SQLite，无需迁移外部向量数据库。
+
+## 0.2.7 合并后复验补充
+
+代码 `2bdb5ee` 的 [Windows/Ubuntu CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34469688900) 完成同一脚本及 153 项功能测试，release-gate 成功。完整旧/新对照见 [复验报告](REVIEW-v0.2.7.md)，所有查询的日志摘要、任务和 artifact 元数据见 [ci-v0.2.7.json](performance/ci-v0.2.7.json)。本轮没有改动搜索或基准实现。
+
+- Ubuntu 50k/100k 英文 FTS P95：397.37→77.66ms / 803.70→152.67ms。
+- Windows 50k/100k 英文 FTS P95：688.41→159.98ms / 829.45→197.37ms。
+- Windows 50k/100k 并发 get：424.50→17.35ms / 861.07→17.60ms；并发 stats：465.01→64.75ms / 942.12→122.80ms。
+
+本轮 Windows 50k FTS 超过 150ms 建议值、100k 并发 stats 超过 100ms 建议值。收益保持，但不能宣称跨轮稳定达标。历史 0.2.6 数据继续保留作为独立测量，不以较快的旧记录替换本次结果。下一轮实际设备复测需同时纳入 50k FTS 的延迟稳定性和 100k stats。

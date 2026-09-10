@@ -6,6 +6,8 @@ PR #1 已合并，随后在 main 重新执行 typecheck/build/test。合并基�
 
 0.2.7 另新增 `integration/memory-time.test.ts` 的 3 项回归，验证来源时钟超前时的普通编辑、实际删除时间、恢复、导入 dry-run/缺失或显式时间字段，以及合并对源/目标时间顺序的保护。
 
+代码 `2bdb5ee` 的 [主分支 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34469688900) 全部成功：Windows/Ubuntu 均为 153/153，0 失败、0 跳过；Node 24.20.0；doctor/init、stdio smoke、50k/100k 基准及 release-gate 均通过。测试阶段分别约 20.39 秒和 12.53 秒。性能不等于全部达标：本轮 Windows 50k 英文 FTS P95 159.98ms、100k 并发 stats P95 122.80ms，超过相应 150/100ms 建议值。完整对照及原始日志摘要见复验报告及 [ci-v0.2.7.json](performance/ci-v0.2.7.json)。
+
 ## 0.2.6 性能实施验证（历史证据）
 
 日期：2026-09-10。针对独立审查 R1/R2/R3 修复及 R4 FTS 性能实施；用户实际客户端、真实模型及全面规模仍有验证边界。

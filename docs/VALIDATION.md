@@ -13,7 +13,8 @@
 | pnpm build | 通过 |
 | pnpm test | **94 通过 / 0 失败 / 0 跳过** |
 | 最终全套测试耗时 | 约 3.72 秒，仅代表此测试套件 |
-| Windows | 本次 CI 待核对；上次运行因测试清理错误失败，已修复清理顺序 |
+| Windows | [代码 897d6fb 的 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34430296053) 全套测试、doctor/init 与 smoke 通过 |
+| 远端汇总 | Ubuntu、Windows、release-gate 均 success |
 | 真实云模型 | 尚未联调；HTTP 合约使用本地模拟服务验证 |
 
 ## 测试文件与覆盖
@@ -40,7 +41,7 @@
 
 本次相对 0.2.1 新增 21 项测试。最终执行 pnpm check（typecheck → build → test），94 通过、0 失败、0 跳过；测试耗时 3718.917001ms，不代表大库性能。迁移测试通过在真实 SQLite 备份前后暂停、写入和另一个连接升级，验证重拍及同步迁移；文件读取测试在首次 fstat 后扩文件并确认实际读取不超过 maxBytes+1。
 
-上次 Windows CI 的真实失败原因见 [运行 34206062929](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34206062929)：临时目录清理早于数据库关闭，导致 EPERM，后续挂起至超时。本次所有测试资源按注册逆序关闭，失败时仍尝试其余清理；测试上限 60 秒、矩阵 job 上限 15 分钟。仍需核对本次远端 Windows 结果。
+上次 Windows CI 的真实失败原因见 [运行 34206062929](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34206062929)：临时目录清理早于数据库关闭，导致 EPERM，后续挂起至超时。本次所有测试资源按注册逆序关闭，失败时仍尝试其余清理；测试上限 60 秒、矩阵 job 上限 15 分钟。本次已核对远端 Windows、Ubuntu 和 release-gate 全部通过；对应代码提交 897d6fb，后续仅更新验证文档。
 
 运行命令：
 
@@ -51,4 +52,4 @@ pnpm build
 pnpm test
 ```
 
-未验证：Windows 原生、大型数据库 P95/RSS、长时并发压力、真实供应商模型质量及不同产品客户端配置。不得将这些本地结果当作 Windows Release Gate 已通过。
+未验证：用户 Windows 10/11 实机环境与实际客户端、大型数据库 P95/RSS、长时并发压力、真实供应商模型质量。Windows CI 通过不代表这些验证已完成。

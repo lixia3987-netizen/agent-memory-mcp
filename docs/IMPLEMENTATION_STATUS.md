@@ -4,7 +4,7 @@
 
 ## 本次结果
 
-二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。Linux 本地类型检查、构建和 94 项测试通过。Windows 原生、真实供应商模型和规模性能尚待验证，因此尚未满足正式 Release 的全部完成定义。
+二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。Linux 本地类型检查、构建和 94 项测试通过。本次代码 897d6fb 的 Ubuntu/Windows CI 与 release-gate 均已通过。用户 Windows 10/11 实机客户端接入、真实供应商模型和规模性能尚待验证，因此尚未满足正式 Release 的全部完成定义。
 
 | 阶段 | 状态 | 实现与证据 |
 | --- | --- | --- |
@@ -21,13 +21,13 @@
 | P2-9 Importer 插件接口 | 已实现并测试 | extensions / detectVersion / parse / register；JSON、Markdown、Claude Code |
 | P2-10 Policy / Maintenance / Metrics | 已实现并测试 | 秘密规则、大小/来源/类型/TTL 等策略；维护与本地指标 |
 | P2-11 可选 HTTP | 已实现并测试 | 官方 SDK 无状态 Streamable HTTP、loopback、令牌和 Host/Origin/大小/并发限制 |
-| P2-12 Windows 完整回归 | **待执行** | 继承 Ubuntu/Windows Node 24 CI；当前环境没有 Windows |
+| P2-12 Windows 回归 | **CI 通过，用户实机待验** | [897d6fb 的 Windows Node 24 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34430296053) 全套测试、doctor/init 与 smoke 通过 |
 
 ## 0.2.2 审查修订
 
 复核并修复本轮 15 项问题：凭据检测与 metadata 脱敏、活跃去重排除过期记录、关系更新冲突及封存历史保护、imports strict 与路径/IO 校验、导入时间戳和缺失字段合并、enrichment 可重试任务保留、迁移备份锁范围、历史查询和别名一致性、受限文件读取。详见 [REVIEW_FIXES-v0.2.2.md](REVIEW_FIXES-v0.2.2.md)。
 
-新增 21 项测试，本地全量 94 项通过；保留 schema 104 和既有依赖。另修复上次 Windows CI 暴露的测试资源清理顺序，并增加测试/CI 超时上限。Windows 本次结果以 Actions 为准，不沿用 Linux 通过结论。
+新增 21 项测试，本地全量 94 项通过；保留 schema 104 和既有依赖。另修复上次 Windows CI 暴露的测试资源清理顺序，并增加测试/CI 超时上限。本次 [Ubuntu/Windows Actions 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34430296053) 均通过，验证的是代码提交 897d6fb。
 
 ## 0.2.1 审查修订（历史）
 
@@ -54,7 +54,7 @@
 
 ## 明确边界
 
-1. 未在 Windows 执行，未连接用户的真实 Embedding/LLM；模型质量、费用、限流、专有格式尚未验证。
+1. Windows CI 已通过，用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
 2. 未执行 5 万/10 万条 Memory、10 万 Entity/50 万 Relation 的性能基准，不能宣称达到原文档 P95/RSS 目标。
 3. 默认向量检索是受数量与内存预算约束的本地余弦计算，不是 ANN 或 SQLite 向量扩展；结果可截断。
 4. memory_at_time 查询关系事实，未实现所有 Memory 正文的通用版本历史；合并原快照另行保存。
@@ -69,6 +69,6 @@
 
 ## 后续验证
 
-优先执行目标 Windows 的 pnpm install --frozen-lockfile、typecheck、build、test，并验证实际客户端接入；然后配置真实模型跑小规模联调，最后按实际数据库规模测性能。源码仓库为 [lixia3987-netizen/agent-memory-mcp](https://github.com/lixia3987-netizen/agent-memory-mcp)，Ubuntu/Windows CI 结果以 [GitHub Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions) 为准。当前未发布 npm 包。
+接下来在用户目标 Windows 10/11 上确认安装及实际客户端接入；然后配置真实模型跑小规模联调，最后按实际数据库规模测性能。源码仓库为 [lixia3987-netizen/agent-memory-mcp](https://github.com/lixia3987-netizen/agent-memory-mcp)，Ubuntu/Windows CI 结果以 [GitHub Actions](https://github.com/lixia3987-netizen/agent-memory-mcp/actions) 为准。当前未发布 npm 包。
 
 历史记录：IMPLEMENTATION_STATUS-v0.1.0.md、VALIDATION-v0.1.0.md、IMPLEMENTATION_STATUS-v0.2.0.md、VALIDATION-v0.2.0.md。使用说明：PHASE2_GUIDE.md。

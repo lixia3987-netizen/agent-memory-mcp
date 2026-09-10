@@ -36,7 +36,7 @@
 
 ## Windows 验证发现的附加修复
 
-上次 [Windows Actions 日志](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34206062929) 显示测试清理临时目录早于 SQLite 连接关闭，出现 EPERM，随后挂起。本次为测试资源引入逆序清理：先关客户端/连接，再删目录，即便某项清理失败也继续清理其余资源。完整测试与 smoke 增加 60 秒上限，CI validate job 增加 15 分钟上限。没有跳过 Windows 测试或放宽业务断言。
+上次 [Windows Actions 日志](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34206062929) 显示测试清理临时目录早于 SQLite 连接关闭，出现 EPERM，随后挂起。本次为测试资源引入逆序清理：先关客户端/连接，再删目录，即便某项清理失败也继续清理其余资源。完整测试与 smoke 增加 60 秒上限，CI validate job 增加 15 分钟上限。没有跳过 Windows 测试或放宽业务断言。本次 [代码 897d6fb 的 Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34430296053) 均通过。
 
 ## 迁移备份设计依据
 

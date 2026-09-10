@@ -111,13 +111,17 @@ export class SqliteIntelligenceRepository implements IntelligenceRepository {
   }
   recordGlobalImportMetrics(importer: string,stats: unknown): void {
     this.db.prepare('INSERT INTO import_metrics(importer,stats_json,created_at) VALUES(?,?,?)').run(importer,JSON.stringify(stats),Date.now());
-    this.db.exec('DELETE FROM import_metrics WHERE id < (SELECT coalesce(max(id),0)-100 FROM import_metrics)');
+    this.db.exec('DELETE FROM import_metrics WHERE id IN(SELECT id FROM import_metrics ORDER BY id DESC LIMIT -1 OFFSET 100)');
   }
   stats(scope: Scope): IntelligenceStats {
+    const now=Date.now();
     const counts=this.db.prepare(`SELECT
-      (SELECT count(*) FROM memory_embeddings e JOIN memories m ON m.id=e.memory_id WHERE m.namespace=? AND m.project IS ? AND m.content_hash=e.content_hash) embeddings,
-      (SELECT count(*) FROM memory_enrichments e JOIN memories m ON m.id=e.memory_id WHERE m.namespace=? AND m.project IS ? AND m.content_hash=e.content_hash) enrichments,
-      (SELECT count(*) FROM enrichment_jobs j JOIN memories m ON m.id=j.memory_id WHERE m.namespace=? AND m.project IS ? AND j.status IN('pending','running')) pending_jobs`).get(scope.namespace,scope.project,scope.namespace,scope.project,scope.namespace,scope.project)!;
+      (SELECT count(*) FROM memory_embeddings e JOIN memories m ON m.id=e.memory_id WHERE m.namespace=? AND m.project IS ? AND m.content_hash=e.content_hash
+        AND m.deleted_at IS NULL AND (m.expires_at IS NULL OR m.expires_at>?)) embeddings,
+      (SELECT count(*) FROM memory_enrichments e JOIN memories m ON m.id=e.memory_id WHERE m.namespace=? AND m.project IS ? AND m.content_hash=e.content_hash
+        AND m.deleted_at IS NULL AND (m.expires_at IS NULL OR m.expires_at>?)) enrichments,
+      (SELECT count(*) FROM enrichment_jobs j JOIN memories m ON m.id=j.memory_id WHERE m.namespace=? AND m.project IS ? AND j.content_hash=m.content_hash AND j.status IN('pending','running')
+        AND m.deleted_at IS NULL AND (m.expires_at IS NULL OR m.expires_at>?)) pending_jobs`).get(scope.namespace,scope.project,now,scope.namespace,scope.project,now,scope.namespace,scope.project,now)!;
     return { embeddings:Number(counts.embeddings),enrichments:Number(counts.enrichments),pending_jobs:Number(counts.pending_jobs),metrics_scope:'whole_database',
       tool_metrics:this.db.prepare('SELECT tool,calls,errors,total_ms/calls average_ms,max_ms FROM tool_metrics ORDER BY tool').all()
         .map(r=>({tool:String(r.tool),calls:Number(r.calls),errors:Number(r.errors),average_ms:Number(r.average_ms),max_ms:Number(r.max_ms)})),

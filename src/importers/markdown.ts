@@ -8,16 +8,17 @@ import { AppError } from '../shared/errors.ts';
 export function frontmatter(text: string): { attributes: Record<string, unknown>; body: string } {
   const normalized = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   if (!normalized.startsWith('---\n')) return { attributes: {}, body: normalized };
-  const match = /^---\n([\s\S]*?)\n---(?:\n|$)/.exec(normalized);
-  if (!match) throw new AppError('IMPORT_FAILED', 'Markdown frontmatter has no closing delimiter.');
-  const doc = parseDocument(match[1]!, { uniqueKeys: true, customTags: [] });
+  const remaining = normalized.slice(4);
+  const closing = /^---(?:\n|$)/m.exec(remaining);
+  if (!closing) throw new AppError('IMPORT_FAILED', 'Markdown frontmatter has no closing delimiter.');
+  const doc = parseDocument(remaining.slice(0, closing.index), { uniqueKeys: true, customTags: [] });
   if (doc.errors.length) throw new AppError('IMPORT_FAILED', 'Markdown frontmatter contains invalid YAML.');
   let value: unknown;
   try { value = doc.toJS({ maxAliasCount: 20 }); }
   catch { throw new AppError('IMPORT_FAILED', 'Markdown frontmatter exceeds the YAML alias limit.'); }
   if (value === null) value = {};
   if (typeof value !== 'object' || Array.isArray(value)) throw new AppError('IMPORT_FAILED', 'Markdown frontmatter must be an object.');
-  return { attributes: value as Record<string, unknown>, body: normalized.slice(match[0].length) };
+  return { attributes: value as Record<string, unknown>, body: remaining.slice(closing.index + closing[0].length) };
 }
 export function splitHeadings(body: string): { title: string | null; content: string; key: string }[] {
   const sections: { title: string | null; content: string; key: string }[] = [];

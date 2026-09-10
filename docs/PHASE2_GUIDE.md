@@ -1,4 +1,4 @@
-# 二期使用指南 · 0.2.3
+# 二期使用指南 · 0.2.4
 
 ## 直接开始使用
 
@@ -144,7 +144,7 @@ hybrid 使用 RRF 融合词法、语义和图谱相关 Memory，再作轻微重�
 
 ## 去重与合并
 
-memory_find_duplicates 不修改数据。text 使用字符三元组 Dice；semantic 使用**已经缓存**的同模型向量，不额外调用模型；hybrid 取文本/语义相似度的较高值。默认候选数量 1000；`duplicates.maxCandidateBytes` 默认 8 MiB，按候选 Memory 序列化后的 UTF-8 字节计量。它独立于 `embedding.maxVectorBytes`（默认 32 MiB 原始向量 BLOB），两者都不是进程 RSS 上限。结果分别返回 `text_truncated`、`vector_truncated`；任一受限时 `truncated=true`。建议从候选中确认，不把阈值当作事实正确性的保证。
+memory_find_duplicates 不修改数据。text 使用按 Unicode 码点切片的字符三元组 Dice，先做 NFKC/大小写/空白规范化，不拆分 emoji 的 UTF-16 代理对（并非按字素簇分词）；semantic 使用**已经缓存**的同模型向量，不额外调用模型；hybrid 取文本/语义相似度的较高值。默认候选数量 1000；`duplicates.maxCandidateBytes` 默认 8 MiB，按候选 Memory 序列化后的 UTF-8 字节计量。它独立于 `embedding.maxVectorBytes`（默认 32 MiB 原始向量 BLOB），两者都不是进程 RSS 上限。结果分别返回 `text_truncated`、`vector_truncated`；任一受限时 `truncated=true`。建议从候选中确认，不把阈值当作事实正确性的保证。
 
 memory_merge 先预览：
 
@@ -192,7 +192,9 @@ claim 同时退休旧版已超限的 pending 任务和已过期的最终租约�
 
 policy 支持 rejectTypes/rejectSources/rejectNamespaces、minimumImportance、maxContentBytes、defaultTtlDays、typeDefaults、duplicateThreshold 和秘密检测。默认保留一期 importance=5 与无 TTL 的语义，不自动提高 decision 的重要度；示例可自行配置。
 
-secretDetection 默认为 true、secretAction 为 reject。凭据检测不再要求值至少 8 字符，支持标点和引号内空格，脱敏未加引号的凭据时保留外层 JSON/文本引号。redact 模式针对 Memory 正文/标题/metadata 脱敏；metadata 的敏感键直接隐藏整个值（包括短字符串、数字和容器）；图谱属性及 LLM 输出中匹配的秘密仍拒绝。规则检测不能保证识别全部秘密。自定义 regex 是本机可信配置，应使用简单、有界模式。策略覆盖新增、更新和导入；不会批量改写历史数据库。
+secretDetection 默认为 true、secretAction 为 reject。凭据检测不再要求值至少 8 字符，支持标点和引号内空格，脱敏区分凭据内部引号与外层字符串边界。有效 JSON 只重写变更的字符串片段，保留外层结构、排版、未修改的转义和大整数原文。未加引号的值以空白、逗号、分号或结构闭合符为界，内部引号属于值；开头带引号却未闭合时保守隐藏剩余值。redact 模式针对 Memory 正文/标题/metadata 脱敏；metadata 的敏感键直接隐藏整个值（包括短字符串、数字和容器）；图谱属性及 LLM 输出中匹配的秘密仍拒绝。规则检测不能保证识别全部秘密。自定义 regex 是本机可信配置，应使用简单、有界模式。策略覆盖新增、更新和导入；不会批量改写历史数据库。
+
+内置凭据规则只豁免完整的 [REDACTED] 值（包括引号包裹及 Authorization scheme），metadata 敏感键也允许这个精确占位值。redact→reject 后，原有脱敏记录的更新、import-update、merge 继续可用；占位符后缀、邻接的新凭据和自定义 secretPatterns 仍照常校验。JSON 结构保留针对内置凭据脱敏；会匹配 JSON 语法字符的自定义正则不保证此性质。
 
 ```powershell
 node dist/index.js importers
@@ -204,11 +206,11 @@ node dist/index.js maintenance --action vacuum --apply
 node dist/index.js stats --namespace work --project demo
 ```
 
-Importer 接口包含 id/version/extensions/detectVersion/parse；内置 JSON、Markdown、Claude Code。开发者可以在 bootstrap 后用 app.imports.register(adapter) 注册自定义模块；MCP 不会加载任意本地代码。没有臆造 Cursor/Codex/Hermes 的内部记忆格式适配器，获取实际格式后再实现。
+Importer 接口包含 id/version/extensions/detectVersion/parse；内置 JSON、Markdown、Claude Code。开发者可以在 bootstrap 后用 app.imports.register(adapter) 注册自定义模块；MCP 不会加载任意本地代码。空 frontmatter 可直接导入，结束标记必须独占整行，取第一个关闭标记；保留 CRLF/BOM 兼容及错误 YAML 拒绝。没有臆造 Cursor/Codex/Hermes 的内部记忆格式适配器，获取实际格式后再实现。
 
 维护 expire/orphans 默认预览，提交后软删除。orphans 只处理无任何关系和链接的实体，保留历史连接。FTS rebuild 与 vacuum 作用于**整个数据库**，应在空闲时显式执行。物理 purge 继续是独立 CLI 命令，要求 --yes/--before。原来源记忆被 purge 时，其来源关系会退休，避免删除后被当作无来源活跃事实重新出现。
 
-metrics 仅存本地，结果通过 `metrics_scope: "whole_database"` 明确标记操作指标的范围：scope 内 Memory/entity/relation/embedding/enrichment/job 数量，以及数据库级工具调用数、错误数、平均/最大耗时和最近导入汇总。指标写入失败不会改变业务操作结果。不会上传遥测，当前不是完整 Prometheus 或性能分析系统。
+metrics 仅存本地，结果通过 `metrics_scope: "whole_database"` 明确标记操作指标的范围：scope 内 Memory/entity/relation/embedding/enrichment/job 数量，以及数据库级工具调用数、错误数、平均/最大耗时和最近导入汇总。派生统计 embeddings/enrichments/pending_jobs 仅统计当前 scope 中未删除、未过期且正文 hash 仍匹配的来源；embeddings 按所有模型的有效存储行计数。软删或到期不物理删除这些行，恢复有效状态后可重新计入。导入指标最多保留最新 100 行（ID 有缺口也按行数计算），查询返回最近 10 行。指标写入失败不会改变业务操作结果。不会上传遥测，当前不是完整 Prometheus 或性能分析系统。
 
 ## 可选 Streamable HTTP
 

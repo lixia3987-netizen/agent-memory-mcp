@@ -11,8 +11,9 @@ export function rrf(rankings: string[][],k=60): Map<string,number> {
 }
 function shingles(text: string): Set<string> {
   const normalized=text.normalize('NFKC').toLowerCase().replace(/\s+/gu,' ').trim();
-  if (normalized.length<3) return new Set([normalized]);
-  const result=new Set<string>();for (let i=0;i<normalized.length-2;i++) result.add(normalized.slice(i,i+3));return result;
+  const points=Array.from(normalized);
+  if (points.length<3) return new Set([normalized]);
+  const result=new Set<string>();for (let i=0;i<points.length-2;i++) result.add(points.slice(i,i+3).join(''));return result;
 }
 export function textSimilarity(a: string,b: string): number {
   const left=shingles(a),right=shingles(b);let overlap=0;

@@ -2,11 +2,11 @@
 
 基于 Node.js 24、TypeScript、官方 MCP TypeScript SDK 和 SQLite 的本地长期记忆服务。
 
-**当前版本：0.2.3，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 112 项测试通过，[代码 cf0c35c 的 Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34446416011) 均通过；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
+**当前版本：0.2.4，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 124 项测试通过，本次 Ubuntu/Windows CI 待验证；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
 
 核心运行不需要 Docker、WSL、虚拟机、外部数据库、Python、JDK、VC++ 构建工具或 API Key。默认使用 stdio，不监听端口，不发送遥测。Embedding/LLM 默认关闭；只有显式启用后，相应操作才会把输入发送到所配置的服务。本地 HTTP 也需要显式配置并启用。
 
-0.2.3 修复本轮 8 项问题：失效事实参与冲突、parallel 更新回归、任务无限重试、历史导入 hash 误跳过、中文混合短词搜索、脱敏引号、冲突引用容量及软删导入行为。新增 18 项回归测试，全量 112 项通过。详见 [REVIEW_FIXES-v0.2.3.md](docs/REVIEW_FIXES-v0.2.3.md)。从 0.2.2 升级无需新增配置或迁移，schema 保持 104；任务执行次数默认最多 3 次。
+0.2.4 修复本轮反馈：redact→reject 锁记录、引号脱敏残留、派生统计包含失效来源、导入指标保留边界、emoji 相似度误判和空 frontmatter。新增 12 项回归测试，全量 124 项通过。详见 [REVIEW_FIXES-v0.2.4.md](docs/REVIEW_FIXES-v0.2.4.md)。从 0.2.3 升级无需新增配置或迁移，schema 保持 104；已有脱敏记录可直接在 reject 模式下继续更新、导入和合并。
 
 0.2.1 是前一轮代码审查修订版：强化仓储 scope 校验、同步事务契约和诊断，修复熔断计数，统一配置与版本来源。逐项结论见 [REVIEW_FIXES-v0.2.1.md](docs/REVIEW_FIXES-v0.2.1.md)。从 0.2.0 升级不新增数据库迁移，schema 仍为 v104；新增配置均有默认值。
 
@@ -160,7 +160,7 @@ Claude importer 仅扫描 memory 目录中的 Markdown，忽略无关项目文�
 
 所有记录先完成格式校验，之后每 100 条一个短事务；数据库冲突导致后续批次失败时，先前已提交批次保留，错误说明已提交数量。重新执行使用来源记录避免重复。dry-run 使用回滚事务模拟同批去重与冲突，期间短暂持有写锁，适合分批预览。
 
-JSON 格式为 `{"schemaVersion":1,"exportedAt":"...","memories":[...]}`。Markdown 导出采用带 schemaVersion 的 YAML frontmatter 存放完整 records，正文是便于阅读的视图；重导入时以 frontmatter 为准。这样可以无损保留换行、元数据、ID 和时间，避免正文分隔符碰撞。普通 Markdown 文件也可以直接导入。
+JSON 格式为 `{"schemaVersion":1,"exportedAt":"...","memories":[...]}`。Markdown 导出采用带 schemaVersion 的 YAML frontmatter 存放完整 records，正文是便于阅读的视图；重导入时以 frontmatter 为准。这样可以无损保留换行、元数据、ID 和时间，避免正文分隔符碰撞。普通 Markdown 文件也可以直接导入。允许空 frontmatter；以第一个独占整行的关闭分隔符结束，不把正文中的后续横线当作头部内容。
 
 导入默认限制：每文件 10 MiB、1000 文件、10000 记录、单次总输入 50 MiB、扫描深度 16。只接受 UTF-8 普通文件，拒绝符号链接/junction，支持配置允许目录。导出最多 100000 记录，默认最大 16 MiB；超限请缩小过滤条件。导入小于 10 MiB 的 JSON/Markdown 导出可按默认配置直接往返，更大文件需提高 maxFileBytes 后导入。
 
@@ -197,7 +197,7 @@ SQLite 使用 WAL、foreign_keys、busy_timeout 和短事务。迁移在 BEGIN I
 
 完整配置示例见 [examples/config.json](examples/config.json)。相对路径相对于进程工作目录解析；客户端配置建议使用绝对路径。`--no-project` 将默认项目显式设为 null。
 
-默认不会扫描任何目录。每次导入都必须给出路径或内联数据；配置 `imports.allowedRoots` 后，文件导入仅允许这些目录。imports 段未知字段、空白 homeDir/dbPath/config 路径会明确报错；读取配置的权限或 IO 错误与 JSON 语法错误分开报告。记忆正文默认不写日志。二期增加基于规则的秘密信息检测，默认拒绝匹配的凭据，也可配置正文/metadata 脱敏；这不是完整 DLP，调用方仍应避免写入秘密。Provider Key 通过环境变量读取，不存数据库。
+默认不会扫描任何目录。每次导入都必须给出路径或内联数据；配置 `imports.allowedRoots` 后，文件导入仅允许这些目录。imports 段未知字段、空白 homeDir/dbPath/config 路径会明确报错；读取配置的权限或 IO 错误与 JSON 语法错误分开报告。记忆正文默认不写日志。二期增加基于规则的秘密信息检测，默认拒绝匹配的凭据，也可配置正文/metadata 脱敏；这不是完整 DLP，调用方仍应避免写入秘密。内置规则只豁免完整的 [REDACTED] 占位值；带真实值后缀或相邻凭据仍会拒绝，自定义规则仍生效。脱敏按引号边界处理，保留有效 JSON 的外层结构、排版和未改动的数值。Provider Key 通过环境变量读取，不存数据库。
 
 ## 开发与验证
 

@@ -1,13 +1,10 @@
 import type { AppConfig } from '../app/config.ts';
 import type { ImportRecord } from './memory.ts';
 import { AppError } from '../shared/errors.ts';
+import { REDACTED, sensitiveName, scanCredentials } from './credentials.ts';
 
 const keyPattern = /\b(?:sk-(?:proj-|ant-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16})\b/g;
 const privateKey = /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?(?:-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|$)/g;
-// Values may contain punctuation, escaped quotes, or (when quoted) spaces.
-// Sensitive names are the signal; short credentials must not bypass policy.
-const credential = /(\b["']?(?:password|passwd|api[_-]?key|access[_-]?token|secret|authorization)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|(?:Bearer|Basic)\s+[^\s,;}\]"']+|\[REDACTED\]|[^\s,;}\]"']+)/gi;
-const sensitiveName = /^(?:password|passwd|api[_-]?key|access[_-]?token|secret|authorization)$/i;
 export class PolicyEngine {
   private config: AppConfig['policy']; private custom: RegExp[];
   constructor(config: AppConfig['policy']) {
@@ -15,15 +12,12 @@ export class PolicyEngine {
     try { this.custom=config.secretPatterns.map(pattern => new RegExp(pattern,'gu')); }
     catch { throw new AppError('VALIDATION_ERROR','A configured secret pattern is not a valid regular expression.'); }
   }
-  private contains(text: string): boolean { return [keyPattern,privateKey,credential,...this.custom].some(regex => { regex.lastIndex=0;return regex.test(text); }); }
+  private contains(text: string): boolean { return [keyPattern,privateKey,...this.custom].some(regex => { regex.lastIndex=0;return regex.test(text); }) || scanCredentials(text).secret; }
   checkSecrets(text: string): void {
     if (this.config.secretDetection && this.contains(text)) throw new AppError('VALIDATION_ERROR','Secret-like data rejected by memory policy. Remove credentials before storing it.');
   }
   private redact(text: string): string {
-    let result=text.replace(keyPattern,'[REDACTED]').replace(privateKey,'[REDACTED]').replace(credential,(_match,prefix:string,value:string)=>{
-      const quote=value[0]==='"' || value[0]==="'" ? value[0] : '';
-      return prefix+quote+'[REDACTED]'+quote;
-    });
+    let result=scanCredentials(text.replace(keyPattern,REDACTED).replace(privateKey,REDACTED)).text;
     for (const pattern of this.custom) result=result.replace(pattern,'[REDACTED]'); return result;
   }
   private clean(value: unknown, key = ''): unknown {
@@ -34,7 +28,7 @@ export class PolicyEngine {
     return value;
   }
   private checkValue(value: unknown, key = ''): void {
-    if (sensitiveName.test(key) && value!==null && value!==undefined) throw new AppError('VALIDATION_ERROR','Secret-like data rejected by memory policy. Remove credentials before storing it.');
+    if (sensitiveName.test(key) && value!==null && value!==undefined && value!==REDACTED) throw new AppError('VALIDATION_ERROR','Secret-like data rejected by memory policy. Remove credentials before storing it.');
     if (typeof value==='string') this.checkSecrets(value);
     else if (Array.isArray(value)) value.forEach(v=>this.checkValue(v));
     else if (value && typeof value==='object') for (const [k,v] of Object.entries(value)) this.checkValue(v,k);

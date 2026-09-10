@@ -13,8 +13,8 @@
 | pnpm build | 通过 |
 | pnpm test | **112 通过 / 0 失败 / 0 跳过** |
 | 最终全套测试耗时 | 约 3.68 秒，仅代表此测试套件 |
-| Windows | 本次 CI 待验证；0.2.2 历史证据另存 |
-| 远端汇总 | 本次 CI 待验证 |
+| Windows | [代码 cf0c35c 的 CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34446416011)：112 通过 / 0 失败 / 0 跳过；doctor/init 与 smoke 通过 |
+| 远端汇总 | Ubuntu、Windows、release-gate 均 success |
 | 真实云模型 | 尚未联调；HTTP 合约使用本地模拟服务验证 |
 
 ## 测试文件与覆盖
@@ -42,7 +42,7 @@
 
 本次相对 0.2.2 新增 18 项测试。最初 14 项在未修复代码上全部失败，修复后通过；随后补充自定义重试预算、作用域/租约边界、显式恢复唯一性与真实 HTTP 429/500 熔断场景。
 
-已执行 pnpm check（typecheck → build → test），并用显式 TAP 报告确认全量结果：112 通过、0 失败、0 跳过；耗时 3677.1582ms，仅代表测试套件，不代表大库性能。当前远端 CI 待验证。上一版 Windows 测试清理顺序修复保留，测试资源逆序关闭，测试上限 60 秒、矩阵 job 上限 15 分钟。
+已执行 pnpm check（typecheck → build → test），并用显式 TAP 报告确认全量结果：112 通过、0 失败、0 跳过；耗时 3677.1582ms，仅代表测试套件，不代表大库性能。已核对 [代码 cf0c35c 的 CI 日志](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34446416011)：Ubuntu 与 Windows 均 112 项通过、0 失败、0 跳过；测试耗时分别约 8.98 秒和 16.06 秒，doctor/init 显示 schema 104 与 integrity ok，smoke 和 release-gate 均通过。后续仅提交验证文档，源代码与测试不变。上一版 Windows 测试清理顺序修复保留，测试资源逆序关闭，测试上限 60 秒、矩阵 job 上限 15 分钟。
 
 运行命令：
 

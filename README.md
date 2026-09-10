@@ -2,7 +2,7 @@
 
 基于 Node.js 24、TypeScript、官方 MCP TypeScript SDK 和 SQLite 的本地长期记忆服务。
 
-**当前版本：0.2.3，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 112 项测试通过，本次 Ubuntu/Windows CI 待验证；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
+**当前版本：0.2.3，一期 + 二期核心实现。** 共 27 个 MCP 工具，包含图谱、时间事实、语义/混合检索、去重合并、可选 LLM 增强、维护与本地 HTTP。二期使用方式见 [PHASE2_GUIDE.md](docs/PHASE2_GUIDE.md)，验证与边界见 [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)。本地类型检查、构建和 112 项测试通过，[代码 cf0c35c 的 Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34446416011) 均通过；外部真实模型尚未联调，完成相应验证前不视为正式 Release。
 
 核心运行不需要 Docker、WSL、虚拟机、外部数据库、Python、JDK、VC++ 构建工具或 API Key。默认使用 stdio，不监听端口，不发送遥测。Embedding/LLM 默认关闭；只有显式启用后，相应操作才会把输入发送到所配置的服务。本地 HTTP 也需要显式配置并启用。
 

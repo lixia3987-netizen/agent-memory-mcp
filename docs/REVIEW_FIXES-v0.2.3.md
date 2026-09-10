@@ -26,7 +26,7 @@ SQLite 官方说明：[FTS5 trigram](https://sqlite.org/fts5.html#the_trigram_to
 ## 验证与兼容
 
 - 新增 18 项回归测试；最初 14 项修复前全部失败、修复后全部通过。
-- 本地 typecheck、build、全量测试通过：112 通过 / 0 失败 / 0 跳过。远端 CI 结果见 [VALIDATION.md](VALIDATION.md)。
+- 本地 typecheck、build、全量测试通过：112 通过 / 0 失败 / 0 跳过。[代码 cf0c35c 的 Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34446416011) 均通过，详见 [VALIDATION.md](VALIDATION.md)。
 - 版本 0.2.3；不新增依赖、不修改已发布迁移，schema 保持 104。
 - 无需补配才能启动；可选 llm.maxAttempts 已加入二期配置示例，默认 3。
 - 不批量改写既有事实或记忆；原来已误标的冲突不会自动撤销。

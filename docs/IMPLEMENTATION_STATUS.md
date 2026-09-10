@@ -4,7 +4,7 @@
 
 ## 本次结果
 
-二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。Linux 本地类型检查、构建和 112 项测试通过。本次 Ubuntu/Windows CI 待验证。用户 Windows 10/11 实机客户端接入、真实供应商模型和规模性能尚待验证，因此尚未满足正式 Release 的全部完成定义。
+二期核心代码已实现，保留一期 8 个工具，总计 27 个 MCP 工具。Linux 本地类型检查、构建和 112 项测试通过。[代码 cf0c35c 的 Ubuntu/Windows CI 与 release-gate](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34446416011) 均通过。用户 Windows 10/11 实机客户端接入、真实供应商模型和规模性能尚待验证，因此尚未满足正式 Release 的全部完成定义。
 
 | 阶段 | 状态 | 实现与证据 |
 | --- | --- | --- |
@@ -21,7 +21,7 @@
 | P2-9 Importer 插件接口 | 已实现并测试 | extensions / detectVersion / parse / register；JSON、Markdown、Claude Code |
 | P2-10 Policy / Maintenance / Metrics | 已实现并测试 | 秘密规则、大小/来源/类型/TTL 等策略；维护与本地指标 |
 | P2-11 可选 HTTP | 已实现并测试 | 官方 SDK 无状态 Streamable HTTP、loopback、令牌和 Host/Origin/大小/并发限制 |
-| P2-12 Windows 回归 | **本次 CI 待验证，用户实机待验** | 0.2.2 的验证记录已保留历史快照 |
+| P2-12 Windows 回归 | **CI 通过，用户实机待验** | [cf0c35c 的 Windows CI](https://github.com/lixia3987-netizen/agent-memory-mcp/actions/runs/34446416011)：112 项测试、doctor/init 与 smoke 通过 |
 
 ## 0.2.3 审查修订
 
@@ -58,7 +58,7 @@
 
 ## 明确边界
 
-1. 本次 Windows CI 待验证；用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
+1. 本次 Windows CI 已通过；用户 Windows 10/11 实机与实际客户端尚未联调；未连接用户真实 Embedding/LLM，模型质量、费用、限流、专有格式尚未验证。
 2. 未执行 5 万/10 万条 Memory、10 万 Entity/50 万 Relation 的性能基准，不能宣称达到原文档 P95/RSS 目标。
 3. 默认向量检索是受数量与内存预算约束的本地余弦计算，不是 ANN 或 SQLite 向量扩展；结果可截断。
 4. memory_at_time 查询关系事实，未实现所有 Memory 正文的通用版本历史；合并原快照另行保存。
